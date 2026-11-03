@@ -22,7 +22,7 @@ type ScanModalProps = {
 type Phase = 'config' | 'running' | 'result';
 
 const BET_OPTIONS = [10, 20, 50, 100, 200];
-const ROUND_OPTIONS = [3, 5, 8];
+const ROUND_OPTIONS = [3, 5, 8, 12, 20, 30];
 
 const rtpOf = (name: string, p: number) => {
   const seed = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -201,6 +201,10 @@ export default function ScanModal({ open, target, onClose, cost, coins, onSpend 
                     </button>
                   ))}
                 </div>
+                <p className="mt-1.5 font-mono text-[9px] leading-relaxed text-foreground-600">
+                  chọn từ 3 đến 30 vòng. Càng nhiều vòng, bảng kết quả càng thể hiện rõ số vòng
+                  thắng và số vòng thua.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2 rounded-md border hairline bg-background-50/50 p-3 font-mono text-[10px] sm:grid-cols-3">

@@ -18,6 +18,8 @@ export const SLOT_STAGES: SlotStage[] = [
   { key: 'render', label: 'kết xuất tín hiệu', note: 'xuất bảng dự đoán' },
 ];
 
+export type SlotRoundOutcome = 'win' | 'lose';
+
 export type SlotRoundPrediction = {
   round: number;
   signal: string;
@@ -25,6 +27,7 @@ export type SlotRoundPrediction = {
   confidence: number;
   bet: number;
   note: string;
+  outcome: SlotRoundOutcome;
 };
 
 const seedOf = (value: string) =>
@@ -35,14 +38,22 @@ const seedOf = (value: string) =>
 const pick = <T,>(list: T[], seed: number, index: number): T =>
   list[(seed + index * 37) % list.length];
 
-const SIGNALS = ['MỞ HŨ LỚN', 'MỞ HŨ NHỎ', 'BUFF FREE SPIN', 'GIỮ NHỊP', 'CHỜ NHỊP'];
+const WIN_SIGNALS = ['MỞ HŨ LỚN', 'MỞ HŨ NHỎ', 'BUFF FREE SPIN', 'GIỮ NHỊP'];
 
-const NOTES = [
+const LOSE_SIGNALS = ['LỆCH NHỊP', 'TÍN HIỆU YẾU', 'BỎ VÒNG', 'HŨ KHOÁ TẠM'];
+
+const WIN_NOTES = [
   'cầu đang tăng nhiệt · vào tay',
   'hũ vừa trả nhỏ · chờ 1 vòng',
   'cửa sổ thưởng mở · ưu tiên',
   'nhịp ổn định · cược đều',
-  'rung nhẹ · giảm vốn',
+];
+
+const LOSE_NOTES = [
+  'dự đoán lệch · mất cược vòng này',
+  'hũ không trả · giữ vốn',
+  'máy đổi nhịp · chưa vào',
+  'tín hiệu nhiễu · bỏ qua vòng',
 ];
 
 export const buildSlotPredictions = (
@@ -53,18 +64,22 @@ export const buildSlotPredictions = (
   const seed = seedOf(gameName || 'yg88');
 
   return Array.from({ length: rounds }, (_, index) => {
-    const signal = pick(SIGNALS, seed, index);
-    const confidence = 74 + ((seed + index * 13) % 22);
-    const multiplier = Number((1.8 + ((seed + index * 7) % 42) / 10).toFixed(1));
+    const roll = (seed + index * 29 + ((index * index * 17) % 41)) % 100;
+    const won = roll < 63;
+    const confidence = won
+      ? 74 + ((seed + index * 13) % 22)
+      : 38 + ((seed + index * 11) % 28);
+    const multiplier = won ? Number((1.8 + ((seed + index * 7) % 42) / 10).toFixed(1)) : 0;
     const step = [0, 1, -1, 1, 0][(seed + index) % 5];
 
     return {
       round: index + 1,
-      signal,
+      signal: won ? pick(WIN_SIGNALS, seed, index) : pick(LOSE_SIGNALS, seed, index),
       multiplier,
       confidence,
       bet: Math.max(2, betLevel + step * 4),
-      note: pick(NOTES, seed, index + 3),
+      note: won ? pick(WIN_NOTES, seed, index + 3) : pick(LOSE_NOTES, seed, index + 3),
+      outcome: won ? 'win' : 'lose',
     };
   });
 };
@@ -122,6 +137,7 @@ export const buildSlotHackScript = (input: {
 
     { kind: 'cmd', text: 'render --format table --confirm', stage: 5 },
     { text: 'tổng hợp tín hiệu · tính độ khớp từng vòng', tone: 'dim', stage: 5 },
+    { text: '[ok] ước tính tỷ lệ thắng/thua theo từng vòng', tone: 'ok', stage: 5 },
     { text: '[ok] xuất bảng dự đoán · sẵn sàng', tone: 'ok', stage: 5 },
     { text: 'phiên lưu vào hồ sơ · đóng kết nối an toàn', tone: 'dim', stage: 5 },
   ];

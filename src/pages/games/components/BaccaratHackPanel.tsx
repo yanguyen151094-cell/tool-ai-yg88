@@ -38,6 +38,7 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
   const [logIndex, setLogIndex] = useState(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [guard, setGuard] = useState(true);
   const [session, setSession] = useState({
     account: '',
     password: '',
@@ -164,18 +165,38 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
               </span>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <form
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              onClick={() => setGuard(false)}
+              className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
+            >
+              <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                <input type="text" name="fake-game-user" autoComplete="off" tabIndex={-1} readOnly />
+                <input
+                  type="password"
+                  name="fake-game-pass"
+                  autoComplete="new-password"
+                  tabIndex={-1}
+                  readOnly
+                />
+              </div>
+
               <label className="flex min-w-0 flex-col gap-1.5">
                 <span className="font-mono text-[10px] tracking-[0.14em] text-foreground-500 uppercase">
                   tài khoản game
                 </span>
                 <input
                   type="text"
-                  name="account"
+                  name="game-account"
                   value={account}
                   onChange={(event) => setAccount(event.target.value)}
-                  placeholder="vd: player8899"
+                  placeholder="khách tự điền tài khoản game"
                   autoComplete="off"
+                  spellCheck={false}
+                  readOnly={guard}
+                  onPointerDown={() => setGuard(false)}
+                  onFocus={() => setGuard(false)}
                   className="w-full rounded border border-background-300/50 bg-background-50/70 px-3 py-2 font-mono text-[12px] text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60"
                 />
               </label>
@@ -186,11 +207,14 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
                 </span>
                 <input
                   type="password"
-                  name="password"
+                  name="game-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="off"
+                  placeholder="khách tự điền mật khẩu game"
+                  autoComplete="new-password"
+                  readOnly={guard}
+                  onPointerDown={() => setGuard(false)}
+                  onFocus={() => setGuard(false)}
                   className="w-full rounded border border-background-300/50 bg-background-50/70 px-3 py-2 font-mono text-[12px] text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60"
                 />
               </label>
@@ -248,6 +272,7 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
                     setCasino('');
                     setRoom('');
                     setError('');
+                    setGuard(true);
                   }}
                   className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-background-300/60 px-4 py-2.5 font-mono text-[12px] whitespace-nowrap text-foreground-300 transition-colors hover:border-primary-500/50 hover:text-primary-500"
                 >

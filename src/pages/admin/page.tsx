@@ -16,21 +16,20 @@ type MenuItem = {
   label: string;
   icon: string;
   hint: string;
-  access: 'owner' | 'all' | 'viewer';
+  access: 'owner' | 'all';
 };
 
 const menu: MenuItem[] = [
   { key: 'credit', label: 'Cộng điểm', icon: 'ri-coins-line', hint: 'cộng điểm cho khách', access: 'all' },
   { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ', access: 'owner' },
   { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi', access: 'owner' },
-  { key: 'users', label: 'Người dùng', icon: 'ri-group-line', hint: 'coin & lịch sử', access: 'viewer' },
+  { key: 'users', label: 'Người dùng', icon: 'ri-group-line', hint: 'coin & lịch sử', access: 'owner' },
   { key: 'staff', label: 'Phân quyền admin', icon: 'ri-shield-user-line', hint: 'nhân viên & quyền', access: 'owner' },
   { key: 'content', label: 'Nội dung web', icon: 'ri-file-text-line', hint: 'chữ & ảnh', access: 'owner' },
 ];
 
 export default function AdminPage() {
-  const { user, profile, isAdmin, adminRole, canViewCustomers, loading, accessChecked, signOut } =
-    useAuth();
+  const { user, profile, isAdmin, adminRole, loading, accessChecked, signOut } = useAuth();
   const [view, setView] = useState<View>('games');
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -95,11 +94,7 @@ export default function AdminPage() {
   }
 
   const isOwner = adminRole === 'owner';
-  const visibleMenu = menu.filter((item) => {
-    if (item.access === 'all') return true;
-    if (item.access === 'viewer') return isOwner || canViewCustomers;
-    return isOwner;
-  });
+  const visibleMenu = menu.filter((item) => item.access === 'all' || isOwner);
   const currentView: View = visibleMenu.some((item) => item.key === view)
     ? view
     : visibleMenu[0].key;
@@ -248,7 +243,7 @@ export default function AdminPage() {
 
           {currentView === 'credit' && <CreditPanel />}
           {currentView === 'games' && <GamesPanel />}
-          {currentView === 'users' && <UsersPanel canAdjust={isOwner} />}
+          {currentView === 'users' && <UsersPanel />}
           {currentView === 'baccarat' && <BaccaratPanel />}
           {currentView === 'staff' && <StaffPanel />}
           {currentView === 'content' && <ContentPanel />}

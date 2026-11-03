@@ -11,7 +11,6 @@ export default function StaffPanel() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [canView, setCanView] = useState(false);
 
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState('');
@@ -61,10 +60,9 @@ export default function StaffPanel() {
       return;
     }
     await run(async () => {
-      await callAdminStaff({ action: 'create_staff', username: name, password, can_view: canView });
+      await callAdminStaff({ action: 'create_staff', username: name, password, can_view: false });
       setUsername('');
       setPassword('');
-      setCanView(false);
     }, `Đã tạo nhân viên ${name}. Anh gửi tên đăng nhập và mật khẩu cho họ vào /admin.`);
   };
 
@@ -78,7 +76,9 @@ export default function StaffPanel() {
       </p>
       <h2 className="mt-1 font-heading text-xl font-bold text-foreground-950">Phân quyền admin</h2>
       <p className="mt-1 text-sm text-foreground-500">
-        Nhân viên chỉ được cộng điểm cho khách. Họ chỉ xem được danh sách khách khi anh bật quyền xem.
+        Nhân viên cấp dưới <strong className="text-foreground-300">chỉ được cộng điểm</strong> cho
+        khách. Họ không xem được danh sách khách, không sửa coin, không đổi mật khẩu hay xóa tài
+        khoản, cũng không vào được các mục quản lý game, Baccarat và nội dung.
       </p>
 
       {notice && (
@@ -119,15 +119,10 @@ export default function StaffPanel() {
               autoComplete="off"
               className={inputClass}
             />
-            <label className="flex cursor-pointer items-center gap-2 font-mono text-[11px] text-foreground-400">
-              <input
-                type="checkbox"
-                checked={canView}
-                onChange={(event) => setCanView(event.target.checked)}
-                className="h-4 w-4 cursor-pointer accent-current"
-              />
-              cho phép xem thông tin khách hàng
-            </label>
+            <p className="flex items-start gap-2 rounded-md border hairline bg-background-50/60 px-3 py-2 font-mono text-[10px] leading-relaxed text-foreground-500">
+              <i className="ri-shield-check-line mt-0.5 text-[12px] text-primary-500" />
+              quyền cố định: chỉ cộng điểm cho khách.
+            </p>
             <button
               type="submit"
               disabled={busy}
@@ -169,33 +164,12 @@ export default function StaffPanel() {
                       <p className="truncate font-mono text-[13px] text-foreground-950">
                         {row.username}
                       </p>
-                      <p className="font-mono text-[10px] text-foreground-600">
-                        {row.can_view_customers ? 'được xem thông tin khách' : 'chỉ cộng điểm'}
-                      </p>
+                      <p className="font-mono text-[10px] text-foreground-600">chỉ cộng điểm</p>
                     </div>
-                    <label className="flex cursor-pointer items-center gap-2 font-mono text-[10px] text-foreground-400">
-                      <input
-                        type="checkbox"
-                        checked={row.can_view_customers}
-                        disabled={busy}
-                        onChange={(event) =>
-                          run(
-                            async () => {
-                              await callAdminStaff({
-                                action: 'set_view',
-                                user_id: row.user_id,
-                                can_view: event.target.checked,
-                              });
-                            },
-                            event.target.checked
-                              ? `Đã cho ${row.username} xem thông tin khách.`
-                              : `Đã thu quyền xem của ${row.username}.`,
-                          )
-                        }
-                        className="h-4 w-4 cursor-pointer accent-current"
-                      />
-                      cho xem khách
-                    </label>
+                    <span className="flex shrink-0 items-center gap-1.5 rounded border border-primary-500/30 bg-primary-500/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-primary-500 uppercase">
+                      <i className="ri-coins-line text-[11px]" />
+                      chỉ cộng điểm
+                    </span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
