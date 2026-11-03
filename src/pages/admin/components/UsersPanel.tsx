@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import type { PlayerProfile } from '@/hooks/useAuth';
 import { isSyntheticEmail, prettyPhone } from '@/lib/phone';
+import { deleteUserAccount, resetUserPassword, suggestPassword } from '@/lib/adminUsers';
 
 type CoinTx = {
   id: string;
@@ -37,6 +38,11 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState('');
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const copyValue = async (label: string, value: string) => {
     try {
@@ -160,6 +166,51 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!selected) return;
+    if (resetPassword.trim().length < 6) {
+      setError('Mật khẩu mới cần từ 6 ký tự.');
+      return;
+    }
+    const name = selected.username || 'khách';
+    setAccountBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await resetUserPassword(selected.id, resetPassword.trim());
+      setNotice(
+        `Đã đặt lại mật khẩu cho ${name}. Gửi mật khẩu mới cho khách và nhắc họ đổi lại sau khi đăng nhập.`,
+      );
+      setResetOpen(false);
+      setResetPassword('');
+    } catch (caught) {
+      setError(messageOf(caught, 'Không đặt lại được mật khẩu.'));
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selected) return;
+    const name = selected.username || 'khách';
+    setAccountBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await deleteUserAccount(selected.id);
+      setRows((prev) => prev.filter((row) => row.id !== selected.id));
+      setHistory([]);
+      setSelectedId(null);
+      setRemoveOpen(false);
+      setResetOpen(false);
+      setNotice(`Đã xóa tài khoản ${name} cùng lịch sử coin và phiên Baccarat của khách.`);
+    } catch (caught) {
+      setError(messageOf(caught, 'Không xóa được tài khoản.'));
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
   const inputClass =
     'w-full rounded-md border border-background-300/50 bg-background-50/70 px-3 py-2 font-mono text-[11px] text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60';
 
@@ -242,6 +293,10 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                       setSelectedId(row.id);
                       setNotice('');
                       setError('');
+                      setResetOpen(false);
+                      setResetPassword('');
+                      setRemoveOpen(false);
+                      setShowPassword(false);
                     }}
                     className={`flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors ${
                       selectedId === row.id ? 'bg-primary-500/10' : 'hover:bg-background-100/40'
@@ -415,6 +470,125 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                   </button>
                 </div>
               </div>
+
+              {canAdjust && (
+                <div className="mt-5 border-t hairline pt-3">
+                  <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
+                    tài khoản đăng nhập
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetOpen((prev) => !prev);
+                        setResetPassword('');
+                        setShowPassword(false);
+                        setRemoveOpen(false);
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="flex cursor-pointer items-center gap-1.5 rounded border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
+                    >
+                      <i className="ri-key-2-line" />
+                      cấp lại mật khẩu
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRemoveOpen((prev) => !prev);
+                        setResetOpen(false);
+                        setResetPassword('');
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="flex cursor-pointer items-center gap-1.5 rounded border border-accent-500/40 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10"
+                    >
+                      <i className="ri-user-unfollow-line" />
+                      xóa tài khoản
+                    </button>
+                  </div>
+
+                  {resetOpen && (
+                    <div className="mt-2 rounded-md border border-primary-500/30 bg-primary-500/5 p-2.5">
+                      <p className="font-mono text-[10px] text-foreground-500">
+                        Đặt mật khẩu mới cho {selected.username || 'khách'}. Khách đăng nhập lại bằng
+                        tên đăng nhập cũ cùng mật khẩu này.
+                      </p>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <div className="relative min-w-0 flex-1">
+                          <input
+                            value={resetPassword}
+                            onChange={(event) => setResetPassword(event.target.value)}
+                            placeholder="Mật khẩu mới (từ 6 ký tự)"
+                            type={showPassword ? 'text' : 'password'}
+                            autoComplete="off"
+                            className={`${inputClass} pr-9`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            className="absolute top-1/2 right-1.5 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-foreground-500 transition-colors hover:text-primary-500"
+                          >
+                            <i
+                              className={`text-[14px] ${
+                                showPassword ? 'ri-eye-off-line' : 'ri-eye-line'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={accountBusy}
+                          onClick={() => {
+                            setResetPassword(suggestPassword());
+                            setShowPassword(true);
+                          }}
+                          className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border hairline px-3 py-2 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500 disabled:opacity-60"
+                        >
+                          <i className="ri-magic-line" />
+                          tạo tự động
+                        </button>
+                        <button
+                          type="button"
+                          disabled={accountBusy}
+                          onClick={handleResetPassword}
+                          className="cursor-pointer rounded-md bg-primary-500 px-4 py-2 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400 disabled:opacity-60"
+                        >
+                          lưu
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {removeOpen && (
+                    <div className="mt-2 rounded-md border border-accent-500/40 bg-accent-500/10 p-2.5">
+                      <p className="font-mono text-[10px] leading-relaxed text-accent-500">
+                        Xóa vĩnh viễn {selected.username || 'khách'}? Tài khoản đăng nhập, số coin,
+                        lịch sử giao dịch và phiên Baccarat sẽ mất và không khôi phục được.
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={accountBusy}
+                          onClick={handleDeleteUser}
+                          className="cursor-pointer rounded-md border border-accent-500/60 px-3 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10 disabled:opacity-60"
+                        >
+                          xác nhận xóa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRemoveOpen(false)}
+                          className="cursor-pointer rounded-md border hairline px-3 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-foreground-950"
+                        >
+                          hủy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="mt-5 border-t hairline pt-3">
                 <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
