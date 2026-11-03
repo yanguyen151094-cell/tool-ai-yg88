@@ -12,6 +12,7 @@ import GameDetailPanel from './components/GameDetailPanel';
 import { baccaratTables, buildProviderOptions, slotGames } from '@/lib/games';
 import { loadGames } from '@/lib/gamesRepo';
 import { useAuth } from '@/hooks/useAuth';
+import { spendCoins } from '@/lib/coins';
 import type { BaccaratTable, SlotGame } from '@/mocks/games';
 
 type Mode = 'slot' | 'baccarat';
@@ -36,7 +37,7 @@ export default function GamesPage() {
   const [query, setQuery] = useState('');
   const [scanTarget, setScanTarget] = useState<ScanTarget>(null);
   const [detail, setDetail] = useState<DetailState>(null);
-  const { user: authUser, profile, signOut } = useAuth();
+  const { user: authUser, profile, signOut, refresh } = useAuth();
   const [coins, setCoins] = useState(0);
   const [slots, setSlots] = useState<SlotGame[]>([]);
   const [tables, setTables] = useState<BaccaratTable[]>([]);
@@ -150,9 +151,22 @@ export default function GamesPage() {
     });
   };
 
-  const handleSpend = (amount: number) => {
-    setCoins((prev) => Math.max(0, prev - amount));
-    setNotice(`Đã trừ ${amount} coin cho phiên phân tích.`);
+  /** Trừ coin thật trên máy chủ, trả về true nếu trừ thành công. */
+  const spend = async (amount: number, note: string) => {
+    if (!authUser) {
+      requireLogin();
+      return false;
+    }
+    const result = await spendCoins(amount, note);
+    if (!result.ok) {
+      if (result.coins > 0) setCoins(result.coins);
+      setNotice(result.message);
+      return false;
+    }
+    setCoins(result.coins);
+    refresh();
+    setNotice(`Đã trừ ${amount.toLocaleString('vi-VN')} coin cho phiên phân tích.`);
+    return true;
   };
 
   const handleLogout = async () => {
@@ -388,7 +402,7 @@ export default function GamesPage() {
               coins={coins}
               cost={HACK_COST}
               playerName={displayName}
-              onSpend={handleSpend}
+              onSpend={spend}
               onNotice={(message) => {
                 if (!authUser) {
                   requireLogin();
@@ -443,7 +457,8 @@ export default function GamesPage() {
         target={scanTarget}
         onClose={() => setScanTarget(null)}
         cost={HACK_COST}
-        onSpend={handleSpend}
+        coins={coins}
+        onSpend={spend}
       />
     </div>
   );

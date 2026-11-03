@@ -206,3 +206,18 @@ textarea:focus,
 select:focus {
   outline: none;
 }
+
+/* Ẩn huy hiệu/khung "Powered by Netlify" do nền tảng host tự chèn vào trang */
+#netlify-badge,
+.netlify-badge,
+[data-netlify-badge],
+[id^="netlify-badge"],
+iframe[src*="netlify.com"],
+a[href*="netlify.com"],
+a[href*="www.netlify.com"],
+div[id*="netlify"][style*="position: fixed"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

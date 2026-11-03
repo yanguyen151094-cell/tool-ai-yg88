@@ -1,4 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import SlotHackConsole from './SlotHackConsole';
+import SlotHackResult from './SlotHackResult';
+import {
+  buildSlotHackScript,
+  buildSlotPredictions,
+  type SlotRoundPrediction,
+} from './slotHackScript';
+import { formatBetLevel } from '@/lib/betting';
 
 type ScanTarget = { name: string; kind: 'slot' | 'baccarat' } | null;
 
@@ -7,192 +15,264 @@ type ScanModalProps = {
   target: ScanTarget;
   onClose: () => void;
   cost: number;
-  onSpend: (coins: number) => void;
+  coins: number;
+  onSpend: (amount: number, note: string) => Promise<boolean>;
 };
 
-const LOG_STEPS = [
-  'handshake → node 14/14 · ssl 1.3',
-  'mount stream · reading last 240 rounds',
-  'normalize → xác suất lệch chuẩn',
-  'pattern match → zigzag 3-2-1',
-  'risk buffer → 0.12 · safe zone',
-  'kết xuất tín hiệu…',
-];
+type Phase = 'config' | 'running' | 'result';
 
-export default function ScanModal({ open, target, onClose, cost, onSpend }: ScanModalProps) {
-  const [progress, setProgress] = useState(0);
-  const [done, setDone] = useState(false);
+const BET_OPTIONS = [10, 20, 50, 100, 200];
+const ROUND_OPTIONS = [3, 5, 8];
+
+const rtpOf = (name: string, p: number) => {
+  const seed = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const base = Number.isFinite(p) && p > 0 ? p : 70 + (seed % 20);
+  return Math.min(98, Math.max(62, Math.round(base * 0.42 + 40)));
+};
+
+export default function ScanModal({ open, target, onClose, cost, coins, onSpend }: ScanModalProps) {
+  const [phase, setPhase] = useState<Phase>('config');
+  const [shown, setShown] = useState(0);
+  const [betLevel, setBetLevel] = useState(20);
+  const [rounds, setRounds] = useState(5);
+  const [busy, setBusy] = useState(false);
+
+  const gameName = target?.name ?? 'Phiên phân tích';
+  const code = useMemo(() => gameName.replace(/\s+/g, '-').toLowerCase(), [gameName]);
+  const rtp = useMemo(() => rtpOf(gameName, 0), [gameName]);
+
+  const lines = useMemo(
+    () =>
+      buildSlotHackScript({
+        gameName,
+        code,
+        provider: target?.kind === 'baccarat' ? 'baccarat' : 'slot',
+        rtp,
+        rounds,
+        betLevel,
+      }),
+    [gameName, code, target?.kind, rtp, rounds, betLevel],
+  );
+
+  const predictions: SlotRoundPrediction[] = useMemo(
+    () => buildSlotPredictions(gameName, rounds, betLevel),
+    [gameName, rounds, betLevel],
+  );
 
   useEffect(() => {
     if (!open) return;
-    setProgress(0);
-    setDone(false);
-    const start = Date.now();
-    const timer = window.setInterval(() => {
-      const next = Math.min(100, Math.round(((Date.now() - start) / 2200) * 100));
-      setProgress(next);
-      if (next >= 100) {
-        window.clearInterval(timer);
-        setDone(true);
-      }
-    }, 60);
-    return () => window.clearInterval(timer);
+    setPhase('config');
+    setShown(0);
+    setBusy(false);
   }, [open, target?.name]);
 
   useEffect(() => {
-    if (done) onSpend(cost);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done]);
-
-  useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previous;
+    };
   }, [open, onClose]);
 
-  const result = useMemo(() => {
-    const seed = (target?.name ?? 'yg88').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const picks = ['BANKER', 'PLAYER', 'TIE'];
-    const signal = target?.kind === 'baccarat' ? picks[seed % 2] : 'MỞ HŨ';
-    return {
-      signal,
-      confidence: 88 + (seed % 10),
-      riskLow: `0.${8 + (seed % 4)}`,
-      rounds: 3 + (seed % 4),
-    };
-  }, [target?.name, target?.kind]);
+  useEffect(() => {
+    if (phase !== 'running') return undefined;
+    if (shown >= lines.length) {
+      const timer = window.setTimeout(() => setPhase('result'), 520);
+      return () => window.clearTimeout(timer);
+    }
+    const delay = lines[shown]?.kind === 'cmd' ? 230 : 72;
+    const timer = window.setTimeout(() => setShown((prev) => prev + 1), delay);
+    return () => window.clearTimeout(timer);
+  }, [phase, shown, lines]);
 
   if (!open) return null;
 
-  const logIndex = Math.min(LOG_STEPS.length, Math.floor((progress / 100) * LOG_STEPS.length));
+  const progress = lines.length === 0 ? 0 : Math.round((shown / lines.length) * 100);
+
+  const startRun = async () => {
+    if (busy) return;
+    setBusy(true);
+    const ok = await onSpend(cost, `Phiên hack nổ hũ · ${gameName} · ${formatBetLevel(betLevel)}`);
+    setBusy(false);
+    if (!ok) return;
+    setShown(0);
+    setPhase('running');
+  };
+
+  const notEnough = coins < cost;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto px-3 py-6 md:items-center">
       <button
         type="button"
         aria-label="Đóng"
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-background-50/85 backdrop-blur-sm"
+        className="fixed inset-0 cursor-default bg-background-50/88 backdrop-blur-sm"
       />
-      <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-primary-500/30 bg-background-100 term-glow">
-        <div className="flex items-center justify-between border-b hairline px-4 py-2.5">
-          <span className="font-mono text-[10px] tracking-[0.18em] text-primary-500 uppercase">
-            ai · đang bẻ khoá
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border hairline text-foreground-500 transition-colors hover:text-primary-500"
-            aria-label="Đóng cửa sổ"
-          >
-            <i className="ri-close-line text-sm" />
-          </button>
+
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg border border-primary-500/30 bg-background-100 term-glow">
+        <div className="flex items-center justify-between gap-3 border-b hairline px-4 py-2.5">
+          <div className="min-w-0">
+            <p className="truncate font-mono text-[10px] tracking-[0.18em] text-primary-500 uppercase">
+              slot signal engine · v4.2.1
+            </p>
+            <p className="mt-0.5 truncate font-mono text-[9px] text-foreground-600">
+              {phase === 'config'
+                ? 'cấu hình phiên trước khi chạy'
+                : phase === 'running'
+                  ? 'đang phân tích dữ liệu phòng'
+                  : 'kết quả phân tích'}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded border hairline bg-background-50/70 px-2 py-1 font-mono text-[10px]">
+              <i className="ri-copper-coin-line text-accent-500" />
+              <span className="text-foreground-950 tabular-nums">{coins.toLocaleString('vi-VN')}</span>
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border hairline text-foreground-500 transition-colors hover:text-primary-500"
+              aria-label="Đóng cửa sổ"
+            >
+              <i className="ri-close-line text-sm" />
+            </button>
+          </div>
         </div>
 
-        <div className="p-5">
-          <p className="truncate font-heading text-lg font-semibold text-foreground-950">
-            {target?.name ?? 'Phiên phân tích'}
-          </p>
-          <p className="mt-1 font-mono text-[10px] tracking-[0.14em] text-foreground-600 uppercase">
-            {target?.kind === 'baccarat' ? 'baccarat table' : 'slot room'} · {cost} coin
-          </p>
-
-          <div className="mt-5 flex items-center gap-4">
-            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-primary-500/30">
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: `conic-gradient(oklch(var(--primary-500)) ${progress}%, transparent ${progress}%)`,
-                  mask: 'radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px))',
-                  WebkitMask:
-                    'radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px))',
-                }}
-              />
-              <span className="font-mono text-sm font-bold text-primary-500">{progress}%</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-background-300/60">
-                <div
-                  className="h-full rounded-full bg-primary-500 transition-all duration-100"
-                  style={{ width: `${progress}%` }}
-                />
+        <div className="p-3 md:p-4">
+          {phase === 'config' && (
+            <div className="space-y-3">
+              <div className="rounded-md border hairline bg-background-50/60 p-3">
+                <p className="truncate font-heading text-[15px] font-semibold text-foreground-950">
+                  {gameName}
+                </p>
+                <p className="mt-0.5 font-mono text-[9px] tracking-[0.08em] text-foreground-600 uppercase">
+                  phòng {code} · rtp {rtp}% ·{' '}
+                  {target?.kind === 'baccarat' ? 'baccarat' : 'nổ hũ / slot'}
+                </p>
               </div>
-              <p className="mt-2 truncate font-mono text-[10px] text-foreground-600">
-                {done ? 'hoàn tất · tín hiệu đã sẵn sàng' : LOG_STEPS[Math.max(0, logIndex - 1)]}
-              </p>
-            </div>
-          </div>
 
-          <div className="mt-5 h-[132px] overflow-hidden rounded border border-primary-500/15 bg-background-50/70 p-3">
-            <div className="space-y-1.5 font-mono text-[10px] leading-relaxed">
-              {LOG_STEPS.slice(0, Math.max(1, logIndex)).map((line, index) => (
-                <p key={line} className="truncate text-foreground-500">
-                  <span className="mr-1.5 text-foreground-700">
-                    {String(index + 1).padStart(2, '0')}
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.16em] text-foreground-600 uppercase">
+                  mức cược / vòng
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {BET_OPTIONS.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setBetLevel(level)}
+                      className={`cursor-pointer rounded border px-2.5 py-1.5 font-mono text-[11px] whitespace-nowrap transition-colors ${
+                        betLevel === level
+                          ? 'border-primary-500/60 bg-primary-500/15 text-primary-500'
+                          : 'border-background-300/50 bg-background-50/60 text-foreground-500 hover:text-foreground-950'
+                      }`}
+                    >
+                      {formatBetLevel(level)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.16em] text-foreground-600 uppercase">
+                  số vòng phân tích
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {ROUND_OPTIONS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRounds(value)}
+                      className={`cursor-pointer rounded border px-2.5 py-1.5 font-mono text-[11px] whitespace-nowrap transition-colors ${
+                        rounds === value
+                          ? 'border-primary-500/60 bg-primary-500/15 text-primary-500'
+                          : 'border-background-300/50 bg-background-50/60 text-foreground-500 hover:text-foreground-950'
+                      }`}
+                    >
+                      {value} vòng
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 rounded-md border hairline bg-background-50/50 p-3 font-mono text-[10px] sm:grid-cols-3">
+                <p className="text-foreground-600">
+                  phí phiên: <span className="text-primary-500">{cost} coin</span>
+                </p>
+                <p className="text-foreground-600">
+                  còn lại sau khi chạy:{' '}
+                  <span className="text-foreground-950">
+                    {Math.max(0, coins - cost).toLocaleString('vi-VN')} coin
                   </span>
-                  <span className="text-primary-500">$</span> {line}
-                  {index === Math.max(0, logIndex - 1) && !done && (
-                    <span className="ml-1 inline-block h-2.5 w-1.5 animate-caret bg-primary-500 align-middle" />
-                  )}
                 </p>
-              ))}
-            </div>
-          </div>
+                <p className="text-foreground-600">
+                  dữ liệu: <span className="text-foreground-950">4.812 vòng</span>
+                </p>
+              </div>
 
-          {done && (
-            <div className="mt-4 rounded-md border border-primary-500/30 bg-primary-500/5 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
-                    tín hiệu
-                  </p>
-                  <p className="font-heading text-xl font-bold text-primary-500">{result.signal}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
-                    độ khớp
-                  </p>
-                  <p className="font-heading text-xl font-bold text-foreground-950">
-                    {result.confidence}%
-                  </p>
-                </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={startRun}
+                  disabled={busy}
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary-500 px-4 py-2.5 font-mono text-[12px] font-semibold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <i className={busy ? 'ri-loader-4-line animate-spin' : 'ri-play-circle-line'} />
+                  {busy ? 'đang trừ coin…' : `bắt đầu chạy · ${cost} coin`}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-background-300/60 px-4 py-2.5 font-mono text-[12px] whitespace-nowrap text-foreground-300 transition-colors hover:border-primary-500/50 hover:text-primary-500"
+                >
+                  <i className="ri-arrow-left-line" />
+                  quay lại
+                </button>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t hairline pt-3 font-mono text-[10px]">
-                <p className="text-foreground-600">
-                  rủi ro: <span className="text-foreground-200">{result.riskLow}</span>
-                </p>
-                <p className="text-foreground-600">
-                  theo dõi: <span className="text-foreground-200">{result.rounds} vòng</span>
-                </p>
-              </div>
+
+              <p className="font-mono text-[9px] leading-relaxed text-foreground-600">
+                {notEnough
+                  ? 'Bạn không đủ coin cho phiên này — nạp thêm rồi chạy lại nhé.'
+                  : `Coin được trừ ngay khi bấm chạy và được ghi vào lịch sử giao dịch. Kết quả mỗi vòng vẫn ngẫu nhiên, bảng chỉ mang tính thống kê.`}
+              </p>
             </div>
           )}
 
-          <p className="mt-4 font-mono text-[9px] leading-relaxed text-foreground-700">
-            * Kết quả mỗi ván là ngẫu nhiên. Tín hiệu trên chỉ phản ánh thống kê dữ liệu quá khứ, không
-            đảm bảo thắng.
-          </p>
+          {phase === 'running' && (
+            <SlotHackConsole
+              gameName={gameName}
+              code={code}
+              provider={target?.kind === 'baccarat' ? 'baccarat' : 'slot'}
+              lines={lines}
+              shown={shown}
+              running
+              progress={progress}
+              rtp={rtp}
+              betLevel={betLevel}
+              rounds={rounds}
+            />
+          )}
 
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary-500 px-4 py-2.5 font-mono text-[12px] font-semibold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400"
-            >
-              <i className="ri-check-line" />
-              Đã hiểu
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-primary-500/40 px-4 py-2.5 font-mono text-[12px] whitespace-nowrap text-foreground-200 transition-colors hover:border-primary-500/70 hover:text-primary-500"
-            >
-              Đóng
-            </button>
-          </div>
+          {phase === 'result' && (
+            <SlotHackResult
+              gameName={gameName}
+              code={code}
+              predictions={predictions}
+              coins={coins}
+              cost={cost}
+              busy={busy}
+              onReplay={startRun}
+              onClose={onClose}
+            />
+          )}
         </div>
       </div>
     </div>

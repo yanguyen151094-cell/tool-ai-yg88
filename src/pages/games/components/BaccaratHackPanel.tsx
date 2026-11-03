@@ -10,7 +10,7 @@ type Props = {
   coins: number;
   cost: number;
   playerName?: string | null;
-  onSpend: (amount: number) => void;
+  onSpend: (amount: number, note: string) => Promise<boolean>;
   onNotice: (message: string) => void;
 };
 
@@ -37,6 +37,7 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
   const [phase, setPhase] = useState<Phase>('form');
   const [logIndex, setLogIndex] = useState(0);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const [session, setSession] = useState({
     account: '',
     password: '',
@@ -79,7 +80,19 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
 
   const progress = lines.length === 0 ? 0 : Math.round((logIndex / lines.length) * 100);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const charge = async (note: string) => {
+    if (coins < cost) {
+      onNotice(`Bạn cần ${cost} coin cho một phiên phân tích.`);
+      return false;
+    }
+    if (busy) return false;
+    setBusy(true);
+    const ok = await onSpend(cost, note);
+    setBusy(false);
+    return ok;
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!account.trim()) {
       setError('Nhập tài khoản game trước đã.');
@@ -93,13 +106,6 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
       setError('Nhập tên nhà cái bạn đang chơi.');
       return;
     }
-    if (coins < cost) {
-      onNotice(`Bạn cần ${cost} coin cho một phiên phân tích.`);
-      return;
-    }
-
-    setError('');
-    onSpend(cost);
 
     const payload = {
       account: account.trim(),
@@ -109,6 +115,10 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
       preferred: isPreferredCasino(casino),
     };
 
+    const paid = await charge(`Phiên bẻ khoá baccarat · ${payload.casino}`);
+    if (!paid) return;
+
+    setError('');
     setSession(payload);
     storeSession(payload);
     setLogIndex(0);
@@ -121,12 +131,9 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
     setError('');
   };
 
-  const replaySession = () => {
-    if (coins < cost) {
-      onNotice(`Bạn cần ${cost} coin cho một phiên phân tích.`);
-      return;
-    }
-    onSpend(cost);
+  const replaySession = async () => {
+    const paid = await charge(`Phiên bẻ khoá baccarat · ${session.casino}`);
+    if (!paid) return;
     storeSession(session);
     setLogIndex(0);
     setPhase('running');
@@ -231,7 +238,7 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
                   className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary-500 px-4 py-2.5 font-mono text-[12px] font-semibold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400"
                 >
                   <i className="ri-fingerprint-line" />
-                  bắt đầu quét · {cost} coin
+                  {busy ? 'đang trừ coin…' : `bắt đầu quét · ${cost} coin`}
                 </button>
                 <button
                   type="button"
