@@ -1,0 +1,31 @@
+export const winners = [
+  { user: 'Chuẩn', amount: '+1.946.364₫', table: 'Đường Mạt Chược 2' },
+  { user: 'Dương', amount: '+1.639.384₫', table: 'Hổ Vằn May' },
+  { user: 'Doanh', amount: '+9.318.000₫', table: 'Bàn Kim Cương 01' },
+  { user: 'Linh', amount: '+8.355.513₫', table: 'Sự Trỗi Dậy Của Thần Mặt Trời' },
+  { user: 'Khuyên', amount: '+1.013.636₫', table: 'Pinata Wins' },
+  { user: 'Hưng', amount: '+4.072.795₫', table: 'Bàn Hoàng Gia 02' },
+  { user: 'Nguyên', amount: '+1.157.876₫', table: 'Asgardian Trỗi Dậy' },
+  { user: 'Chuyên', amount: '+8.341.870₫', table: 'Cao Bồi Hoang Dã' },
+  { user: 'Phô', amount: '+8.616.472₫', table: 'Đêm Tiệc Cocktail' },
+  { user: 'Mị', amount: '+5.596.926₫', table: 'Kho Báu Aztec' },
+  { user: 'Hoài', amount: '+784.093₫', table: 'Bóng Đá Thiếu Lâm' },
+  { user: 'Đích', amount: '+1.501.212₫', table: 'Bàn Speed 03' },
+  { user: 'Khởi', amount: '+5.050.076₫', table: 'Anubis' },
+  { user: 'Luật', amount: '+101.917.286₫', table: 'Bàn VIP 05' },
+  { user: 'Quyên', amount: '+4.455.512₫', table: 'Kẹo Trái Cây' },
+  { user: 'Đức', amount: '+1.896.724₫', table: 'Địa Ngục Cuồng Nộ' },
+  { user: 'Vỹ', amount: '+2.021.792₫', table: 'Bàn Nhanh 06' },
+  { user: 'Bảo', amount: '+102.111.987₫', table: 'Hổ Vằn May' },
+];
+
+export const aiLogs = [
+  'stream #412 · open socket · latency 21ms',
+  'pattern detect → 3-2-1 zigzag · conf 0.96',
+  'banker streak 6 · reset risk 0.12',
+  'slot rtp buffer sync · room 08',
+  'model yg88-net v3.2 · weights ok',
+  'handshake ok · ssl 1.3 · nodes 14/14',
+  'round #48192 → BANKER · hit',
+  'round #48193 → PLAYER · hit',
+];
