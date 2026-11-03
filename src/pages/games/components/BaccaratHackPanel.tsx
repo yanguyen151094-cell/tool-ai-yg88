@@ -19,8 +19,19 @@ const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '
 /** Nhà cái YG88 (kể cả gõ "yg 88", "YG88.COM") được xử lý riêng. */
 const isPreferredCasino = (value: string) => normalize(value).includes('YG88');
 
-const buildLines = (casino: string, account: string, room: string, preferred: boolean) =>
-  preferred ? buildPreferredScript(casino, account, room) : buildLockedScript(casino, account, room);
+const buildLines = (casino: string, account: string, room: string, preferred: boolean, winRate: number) =>
+  preferred
+    ? buildPreferredScript(casino, account, room)
+    : buildLockedScript(casino, account, room, winRate);
+
+/** Nhà cái khác: tỷ lệ thắng ngẫu nhiên mỗi phiên, luôn dưới 30%. */
+const randomLockedWinRate = (previous: number) => {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const value = 8 + Math.floor(Math.random() * 21); // 8% → 28%
+    if (value !== previous) return value;
+  }
+  return previous >= 28 ? 8 : previous + 1;
+};
 
 const STEPS = [
   'Nhập tài khoản game của bạn',
@@ -45,6 +56,7 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
     casino: '',
     room: '',
     preferred: false,
+    winRate: 20,
   });
 
   const storeSession = (input: {
@@ -53,9 +65,9 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
     casino: string;
     room: string;
     preferred: boolean;
+    winRate: number;
   }) => {
-    const winRate = input.preferred ? 89 : 20;
-    void saveBaccaratSession({ ...input, winRate, playerName }).catch(() => {
+    void saveBaccaratSession({ ...input, playerName }).catch(() => {
       // Không chặn phiên khách nếu việc lưu thất bại.
     });
   };
@@ -64,7 +76,13 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
     () =>
       phase === 'form'
         ? []
-        : buildLines(session.casino, session.account, session.room, session.preferred),
+        : buildLines(
+            session.casino,
+            session.account,
+            session.room,
+            session.preferred,
+            session.winRate,
+          ),
     [phase, session],
   );
 
@@ -114,6 +132,7 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
       casino: casino.trim(),
       room: room.trim(),
       preferred: isPreferredCasino(casino),
+      winRate: isPreferredCasino(casino) ? 89 : randomLockedWinRate(0),
     };
 
     const paid = await charge(`Phiên bẻ khoá baccarat · ${payload.casino}`);
@@ -135,12 +154,17 @@ export default function BaccaratHackPanel({ coins, cost, playerName, onSpend, on
   const replaySession = async () => {
     const paid = await charge(`Phiên bẻ khoá baccarat · ${session.casino}`);
     if (!paid) return;
-    storeSession(session);
+    const nextSession = {
+      ...session,
+      winRate: session.preferred ? 89 : randomLockedWinRate(session.winRate),
+    };
+    setSession(nextSession);
+    storeSession(nextSession);
     setLogIndex(0);
     setPhase('running');
   };
 
-  const winRate = session.preferred ? 89 : 20;
+  const winRate = session.winRate;
   const showResult = phase === 'result';
 
   return (

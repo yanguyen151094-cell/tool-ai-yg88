@@ -25,9 +25,11 @@ export const buildLockedScript = (
   casino: string,
   account: string,
   room: string,
+  winRate = 20,
 ): HackLine[] => {
   const name = casino.trim() ? casino.trim().toUpperCase() : 'UNKNOWN';
   const auth = account.trim() ? `${account.trim().slice(0, 2)}••••` : '••••';
+  const rate = Math.min(29, Math.max(6, Math.round(winRate)));
 
   return [
     ...base(name, auth),
@@ -51,7 +53,7 @@ export const buildLockedScript = (
     { text: 'blob integrity check → unchanged (sha256 ok)', tone: 'dim' },
     { text: '⚠ KHÔNG THỂ XÓA MÃ ẨN — hệ thống đã khoá', tone: 'bad' },
     { text: 'fallback → safe mode · conf 71%', tone: 'dim' },
-    { text: `kết xuất tín hiệu bàn ${room.trim() || 'tự chọn'} · winrate 20%`, tone: 'dim' },
+    { text: `kết xuất tín hiệu bàn ${room.trim() || 'tự chọn'} · winrate ${rate}%`, tone: 'dim' },
     { text: 'closing socket · session archived', tone: 'dim' },
   ];
 };

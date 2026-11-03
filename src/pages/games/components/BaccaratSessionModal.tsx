@@ -123,7 +123,7 @@ export default function BaccaratSessionModal({
                     </p>
                     <p className="mt-1.5 max-w-xl font-mono text-[10px] leading-relaxed text-foreground-500">
                       {locked
-                        ? `Mã ẩn của ${casino.toUpperCase()} đang bị lớp bảo vệ riêng khoá lại. Phiên chạy ở mức an toàn, tỷ lệ thắng giữ mức mặc định.`
+                        ? `Mã ẩn của ${casino.toUpperCase()} đang bị lớp bảo vệ riêng khoá lại. Phiên chạy ở mức an toàn, tỷ lệ thắng mỗi phiên dao động dưới 30% và thay đổi theo từng lần quét.`
                         : 'Mã ẩn đã được gỡ khỏi tài khoản, tín hiệu bàn chơi đã đồng bộ với tỷ lệ thắng cao.'}
                     </p>
                   </div>
