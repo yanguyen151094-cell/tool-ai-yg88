@@ -7,6 +7,7 @@ import {
   type SlotRoundPrediction,
 } from './slotHackScript';
 import { formatBetLevel } from '@/lib/betting';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 type ScanTarget = { name: string; kind: 'slot' | 'baccarat' } | null;
 
@@ -36,6 +37,7 @@ export default function ScanModal({ open, target, onClose, cost, coins, onSpend 
   const [betLevel, setBetLevel] = useState(20);
   const [rounds, setRounds] = useState(5);
   const [busy, setBusy] = useState(false);
+  useBodyScrollLock(open);
 
   const gameName = target?.name ?? 'Phiên phân tích';
   const code = useMemo(() => gameName.replace(/\s+/g, '-').toLowerCase(), [gameName]);
@@ -72,11 +74,8 @@ export default function ScanModal({ open, target, onClose, cost, coins, onSpend 
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previous;
     };
   }, [open, onClose]);
 

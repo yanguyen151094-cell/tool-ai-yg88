@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import HackTerminal from './HackTerminal';
 import type { HackLine } from './HackTerminal';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 type Props = {
   casino: string;
@@ -35,14 +36,7 @@ export default function BaccaratSessionModal({
   onReplay,
   onNewSession,
 }: Props) {
-  useEffect(() => {
-    const { body } = document;
-    const prevOverflow = body.style.overflow;
-    body.style.overflow = 'hidden';
-    return () => {
-      body.style.overflow = prevOverflow;
-    };
-  }, []);
+  useBodyScrollLock(true);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

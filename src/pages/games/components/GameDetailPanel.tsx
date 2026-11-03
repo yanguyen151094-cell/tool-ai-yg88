@@ -7,6 +7,7 @@ import {
   liveStake,
   useLiveMetrics,
 } from '@/hooks/useLiveGameMetrics';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 type GameDetailPanelProps = {
   open: boolean;
@@ -38,18 +39,16 @@ export default function GameDetailPanel({
   onHack,
 }: GameDetailPanelProps) {
   const snap = useLiveMetrics();
+  useBodyScrollLock(open);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previous;
     };
   }, [open, onClose]);
 

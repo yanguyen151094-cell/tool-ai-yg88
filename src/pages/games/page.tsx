@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
@@ -176,6 +176,13 @@ export default function GamesPage() {
   };
 
   const total = filteredSlots.length;
+
+  const closeDetail = useCallback(() => setDetail(null), []);
+  const closeScan = useCallback(() => setScanTarget(null), []);
+  const openHackFromDetail = useCallback(() => {
+    if (!detail) return;
+    handleScan(detail.name, detail.kind);
+  }, [detail, coins, authUser]);
 
   return (
     <div className="min-h-screen bg-background-50">
@@ -445,17 +452,14 @@ export default function GamesPage() {
         p={detail?.p ?? 0}
         coins={coins}
         hackCost={HACK_COST}
-        onClose={() => setDetail(null)}
-        onHack={() => {
-          if (!detail) return;
-          handleScan(detail.name, detail.kind);
-        }}
+        onClose={closeDetail}
+        onHack={openHackFromDetail}
       />
 
       <ScanModal
         open={scanTarget !== null}
         target={scanTarget}
-        onClose={() => setScanTarget(null)}
+        onClose={closeScan}
         cost={HACK_COST}
         coins={coins}
         onSpend={spend}
