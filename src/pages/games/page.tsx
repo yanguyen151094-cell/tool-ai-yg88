@@ -37,7 +37,7 @@ export default function GamesPage() {
   const [scanTarget, setScanTarget] = useState<ScanTarget>(null);
   const [detail, setDetail] = useState<DetailState>(null);
   const { user: authUser, profile, signOut } = useAuth();
-  const [coins, setCoins] = useState(30000);
+  const [coins, setCoins] = useState(0);
   const [slots, setSlots] = useState<SlotGame[]>([]);
   const [tables, setTables] = useState<BaccaratTable[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
@@ -78,6 +78,7 @@ export default function GamesPage() {
 
   useEffect(() => {
     if (profile) setCoins(Number(profile.coins ?? 0));
+    else setCoins(0);
   }, [profile?.id, profile?.coins]);
 
   useEffect(() => {
@@ -109,7 +110,16 @@ export default function GamesPage() {
     [compareIds, slots],
   );
 
+  const requireLogin = () => {
+    setNotice('Bạn cần đăng nhập để mở phiên phân tích.');
+    window.setTimeout(() => navigate('/login'), 900);
+  };
+
   const handleScan = (name: string, kind: Mode) => {
+    if (!authUser) {
+      requireLogin();
+      return;
+    }
     if (coins < HACK_COST) {
       setNotice('Bạn đã hết coin. Nạp thêm để tiếp tục mở phiên phân tích.');
       return;
@@ -379,7 +389,13 @@ export default function GamesPage() {
               cost={HACK_COST}
               playerName={displayName}
               onSpend={handleSpend}
-              onNotice={setNotice}
+              onNotice={(message) => {
+                if (!authUser) {
+                  requireLogin();
+                  return;
+                }
+                setNotice(message);
+              }}
             />
           )}
 
