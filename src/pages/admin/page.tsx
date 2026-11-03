@@ -6,18 +6,31 @@ import GamesPanel from './components/GamesPanel';
 import UsersPanel from './components/UsersPanel';
 import ContentPanel from './components/ContentPanel';
 import BaccaratPanel from './components/BaccaratPanel';
+import CreditPanel from './components/CreditPanel';
+import StaffPanel from './components/StaffPanel';
 
-type View = 'games' | 'users' | 'baccarat' | 'content';
+type View = 'games' | 'users' | 'baccarat' | 'content' | 'credit' | 'staff';
 
-const menu: { key: View; label: string; icon: string; hint: string }[] = [
-  { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ' },
-  { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi' },
-  { key: 'users', label: 'Người dùng', icon: 'ri-group-line', hint: 'coin & lịch sử' },
-  { key: 'content', label: 'Nội dung web', icon: 'ri-file-text-line', hint: 'chữ & ảnh' },
+type MenuItem = {
+  key: View;
+  label: string;
+  icon: string;
+  hint: string;
+  access: 'owner' | 'all' | 'viewer';
+};
+
+const menu: MenuItem[] = [
+  { key: 'credit', label: 'Cộng điểm', icon: 'ri-coins-line', hint: 'cộng điểm cho khách', access: 'all' },
+  { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ', access: 'owner' },
+  { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi', access: 'owner' },
+  { key: 'users', label: 'Người dùng', icon: 'ri-group-line', hint: 'coin & lịch sử', access: 'viewer' },
+  { key: 'staff', label: 'Phân quyền admin', icon: 'ri-shield-user-line', hint: 'nhân viên & quyền', access: 'owner' },
+  { key: 'content', label: 'Nội dung web', icon: 'ri-file-text-line', hint: 'chữ & ảnh', access: 'owner' },
 ];
 
 export default function AdminPage() {
-  const { user, profile, isAdmin, loading, accessChecked, signOut } = useAuth();
+  const { user, profile, isAdmin, adminRole, canViewCustomers, loading, accessChecked, signOut } =
+    useAuth();
   const [view, setView] = useState<View>('games');
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -81,7 +94,16 @@ export default function AdminPage() {
     );
   }
 
-  const activeMenu = menu.find((item) => item.key === view) ?? menu[0];
+  const isOwner = adminRole === 'owner';
+  const visibleMenu = menu.filter((item) => {
+    if (item.access === 'all') return true;
+    if (item.access === 'viewer') return isOwner || canViewCustomers;
+    return isOwner;
+  });
+  const currentView: View = visibleMenu.some((item) => item.key === view)
+    ? view
+    : visibleMenu[0].key;
+  const activeMenu = visibleMenu.find((item) => item.key === currentView) ?? visibleMenu[0];
 
   return (
     <div className="min-h-screen bg-background-50">
@@ -103,7 +125,7 @@ export default function AdminPage() {
             </Link>
             <span className="hidden items-center gap-1.5 rounded-full border border-primary-500/30 bg-primary-500/10 px-2.5 py-1 font-mono text-[9px] tracking-[0.14em] text-primary-500 uppercase md:flex">
               <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-primary-500" />
-              admin
+              {isOwner ? 'chủ web' : 'nhân viên'}
             </span>
           </div>
 
@@ -143,7 +165,7 @@ export default function AdminPage() {
         {menuOpen && (
           <div className="border-t hairline px-4 py-3 lg:hidden">
             <div className="flex flex-col gap-1">
-              {menu.map((item) => (
+              {visibleMenu.map((item) => (
                 <button
                   key={item.key}
                   type="button"
@@ -152,7 +174,7 @@ export default function AdminPage() {
                     setMenuOpen(false);
                   }}
                   className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left font-mono text-[12px] transition-colors ${
-                    view === item.key
+                    currentView === item.key
                       ? 'bg-primary-500/15 text-primary-500'
                       : 'text-foreground-400 hover:text-foreground-950'
                   }`}
@@ -173,13 +195,13 @@ export default function AdminPage() {
               bảng điều khiển
             </p>
             <nav className="flex flex-col gap-1">
-              {menu.map((item) => (
+              {visibleMenu.map((item) => (
                 <button
                   key={item.key}
                   type="button"
                   onClick={() => setView(item.key)}
                   className={`flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2.5 text-left transition-colors ${
-                    view === item.key
+                    currentView === item.key
                       ? 'bg-primary-500/15 text-primary-500'
                       : 'text-foreground-400 hover:bg-background-100 hover:text-foreground-950'
                   }`}
@@ -210,7 +232,7 @@ export default function AdminPage() {
                 </p>
                 <p className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
-                  quyền: admin
+                  quyền: {isOwner ? 'chủ web' : 'nhân viên'}
                 </p>
               </div>
             </div>
@@ -224,10 +246,12 @@ export default function AdminPage() {
             <span className="text-foreground-400">{activeMenu.label}</span>
           </div>
 
-          {view === 'games' && <GamesPanel />}
-          {view === 'users' && <UsersPanel />}
-          {view === 'baccarat' && <BaccaratPanel />}
-          {view === 'content' && <ContentPanel />}
+          {currentView === 'credit' && <CreditPanel />}
+          {currentView === 'games' && <GamesPanel />}
+          {currentView === 'users' && <UsersPanel canAdjust={isOwner} />}
+          {currentView === 'baccarat' && <BaccaratPanel />}
+          {currentView === 'staff' && <StaffPanel />}
+          {currentView === 'content' && <ContentPanel />}
         </main>
       </div>
     </div>

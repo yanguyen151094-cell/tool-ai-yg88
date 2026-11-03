@@ -74,8 +74,8 @@ export default function AdminLogin() {
           Đăng nhập quản trị viên
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-foreground-500">
-          Chỉ cần tên đăng nhập và mật khẩu, không cần email. Lần đầu vào, tài khoản quản trị sẽ được
-          tạo tự động với đúng tên và mật khẩu anh nhập.
+          Chỉ cần tên đăng nhập và mật khẩu, không cần email. Tài khoản nhân viên do chủ web tạo và cấp
+          quyền trong khu quản trị.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

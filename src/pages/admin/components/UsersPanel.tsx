@@ -23,7 +23,7 @@ const emailLabel = (row: PlayerProfile) => {
   return 'tài khoản nội bộ';
 };
 
-export default function UsersPanel() {
+export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<PlayerProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -365,7 +365,12 @@ export default function UsersPanel() {
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2">
+              {!canAdjust && (
+                <p className="mt-4 rounded-md border hairline bg-background-50/60 px-3 py-2 font-mono text-[10px] text-foreground-500">
+                  Nhân viên chỉ cộng điểm ở tab "Cộng điểm".
+                </p>
+              )}
+              <div className={`mt-4 space-y-2 ${canAdjust ? '' : 'hidden'}`}>
                 <div>
                   <label className="mb-1.5 block font-mono text-[10px] tracking-[0.14em] text-foreground-600 uppercase">
                     Số coin

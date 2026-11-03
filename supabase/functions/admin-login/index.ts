@@ -60,6 +60,13 @@ Deno.serve(async (req: Request) => {
     .select('user_id', { count: 'exact', head: true });
   const adminCount = count ?? 0;
 
+  // Da co chu web: khong tao them tai khoan nao nua, chi tra email de client dang nhap.
+  // Nhan vien do chu web tao trong tab "Phan quyen admin".
+  if (adminCount > 0) {
+    return json({ ok: true, email, created: false });
+  }
+
+  // Chua co admin nao: tai khoan dau tien se tro thanh chu web (owner).
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -67,19 +74,42 @@ Deno.serve(async (req: Request) => {
     user_metadata: { username },
   });
 
+  let userId = created?.user?.id ?? null;
+
   if (createError) {
     const message = createError.message.toLowerCase();
     const exists =
       message.includes('already') || message.includes('registered') || message.includes('exists');
-    if (exists) {
-      return json({ ok: true, email, created: false });
+    if (!exists) {
+      return json({ ok: false, message: createError.message });
     }
-    return json({ ok: false, message: createError.message });
+
+    // Tai khoan da ton tai nhung chua co quyen admin (vi du quen mat khau): dat lai mat khau.
+    const { data: list, error: listError } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (listError) return json({ ok: false, message: listError.message });
+    const found = list.users.find((item) => item.email?.toLowerCase() === email);
+    if (!found) return json({ ok: false, message: 'Khong tim thay tai khoan.' });
+
+    const { error: updateError } = await admin.auth.admin.updateUserById(found.id, { password });
+    if (updateError) return json({ ok: false, message: updateError.message });
+    userId = found.id;
   }
 
-  if (created?.user && adminCount === 0) {
-    await admin.from('admin_users').insert({ user_id: created.user.id });
+  if (!userId) {
+    return json({ ok: false, message: 'Khong tao duoc tai khoan quan tri.' });
   }
+
+  const { error: insertError } = await admin.from('admin_users').insert({
+    user_id: userId,
+    email,
+    username,
+    role: 'owner',
+    can_view_customers: true,
+  });
+  if (insertError) return json({ ok: false, message: insertError.message });
 
   return json({ ok: true, email, created: true });
 });

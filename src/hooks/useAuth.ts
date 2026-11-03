@@ -20,6 +20,8 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminRole, setAdminRole] = useState<'owner' | 'staff' | null>(null);
+  const [canViewCustomers, setCanViewCustomers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
@@ -59,22 +61,17 @@ export function useAuth() {
           setProfile((created as PlayerProfile | null) ?? null);
         }
 
-        const { data: adminRows, error: adminError } = await supabase
+        const { data: adminRow, error: adminError } = await supabase
           .from('admin_users')
-          .select('user_id');
+          .select('user_id, role, can_view_customers')
+          .eq('user_id', userId)
+          .maybeSingle();
         if (adminError) throw adminError;
 
-        const rows = adminRows ?? [];
-        let granted = rows.some((row: { user_id: string }) => row.user_id === userId);
-
-        if (!granted && rows.length === 0) {
-          const { error: claimError } = await supabase
-            .from('admin_users')
-            .insert({ user_id: userId });
-          if (!claimError) granted = true;
-        }
-
-        setIsAdmin(granted);
+        const role = (adminRow?.role as 'owner' | 'staff' | undefined) ?? null;
+        setIsAdmin(Boolean(adminRow));
+        setAdminRole(role);
+        setCanViewCustomers(role === 'owner' || Boolean(adminRow?.can_view_customers));
       } catch (caught) {
         setError(messageOf(caught, 'Không tải được hồ sơ người chơi.'));
       } finally {
@@ -117,6 +114,8 @@ export function useAuth() {
     if (!user) {
       setProfile(null);
       setIsAdmin(false);
+      setAdminRole(null);
+      setCanViewCustomers(false);
       setAccessChecked(false);
       return;
     }
@@ -222,7 +221,7 @@ export function useAuth() {
       const detail = signInError.message.toLowerCase();
       if (detail.includes('invalid login credentials')) {
         throw new Error(
-          'Sai mật khẩu của tên đăng nhập này.\nNếu anh muốn tài khoản mới, dùng một tên đăng nhập khác.',
+          'Sai tên đăng nhập hoặc mật khẩu.\nNhân viên mới do chủ web tạo trong tab "Phân quyền admin".',
         );
       }
       throw new Error(authMessage(signInError));
@@ -349,6 +348,8 @@ export function useAuth() {
     await supabase.auth.signOut();
     setProfile(null);
     setIsAdmin(false);
+    setAdminRole(null);
+    setCanViewCustomers(false);
   }, []);
 
   return {
@@ -356,6 +357,8 @@ export function useAuth() {
     user: session?.user ?? null,
     profile,
     isAdmin,
+    adminRole,
+    canViewCustomers,
     loading,
     profileLoading,
     accessChecked,
