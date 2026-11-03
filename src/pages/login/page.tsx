@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import TermWindow from '@/components/base/TermWindow';
 import WinTicker from '@/components/feature/WinTicker';
 import { winners } from '@/mocks/winners';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 import { isValidPhone, isValidUsername, normalizeTelegram } from '@/lib/phone';
 
 type Mode = 'login' | 'register';
@@ -14,12 +15,40 @@ const messageOf = (error: unknown, fallback: string) =>
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUpWithContact, signInDemo } = useAuth();
-  const [mode, setMode] = useState<Mode>('login');
+  const refCode = (searchParams.get('ref') ?? '').trim().toLowerCase();
+  const [mode, setMode] = useState<Mode>(refCode ? 'register' : 'login');
+  const [agentName, setAgentName] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+
+  useEffect(() => {
+    if (!refCode) {
+      setAgentName('');
+      return;
+    }
+    let active = true;
+    const loadAgent = async () => {
+      try {
+        const { data } = await supabase
+          .from('admin_users')
+          .select('username, ref_code')
+          .ilike('ref_code', refCode)
+          .limit(1)
+          .maybeSingle();
+        if (active) setAgentName((data?.username as string | null) ?? '');
+      } catch {
+        if (active) setAgentName('');
+      }
+    };
+    loadAgent();
+    return () => {
+      active = false;
+    };
+  }, [refCode]);
 
   const handleDemo = async () => {
     setError('');
@@ -86,7 +115,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await signUpWithContact({ username, password, phone, telegram });
+      await signUpWithContact({ username, password, phone, telegram, refCode });
       navigate('/games');
     } catch (caught) {
       setError(messageOf(caught, 'Không tạo được tài khoản, anh thử lại giúp em.'));
@@ -286,6 +315,19 @@ export default function LoginPage() {
                     className="w-full rounded-md border hairline bg-background-50/80 px-3 py-2.5 font-mono text-sm text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60"
                   />
                 </div>
+
+                {mode === 'register' && refCode && (
+                  <div className="flex items-start gap-2 rounded border border-secondary-500/40 bg-secondary-500/10 px-3 py-2">
+                    <i className="ri-links-line mt-0.5 text-[13px] text-secondary-500" />
+                    <div className="min-w-0">
+                      <p className="font-mono text-[10px] leading-relaxed text-secondary-500">
+                        Bạn đang đăng ký qua đại lý{' '}
+                        <strong>{agentName || refCode}</strong>. Tài khoản sau khi tạo sẽ thuộc đại
+                        lý này.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {mode === 'register' && (
                   <div className="flex items-start gap-2 rounded border border-primary-500/30 bg-primary-500/10 px-3 py-2">

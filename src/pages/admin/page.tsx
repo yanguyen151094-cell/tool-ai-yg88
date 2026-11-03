@@ -8,23 +8,49 @@ import ContentPanel from './components/ContentPanel';
 import BaccaratPanel from './components/BaccaratPanel';
 import CreditPanel from './components/CreditPanel';
 import StaffPanel from './components/StaffPanel';
+import AgencyPanel from './components/AgencyPanel';
 
-type View = 'games' | 'users' | 'baccarat' | 'content' | 'credit' | 'staff';
+type View = 'games' | 'users' | 'baccarat' | 'content' | 'credit' | 'staff' | 'agency';
 
 type MenuItem = {
   key: View;
   label: string;
+  staffLabel?: string;
   icon: string;
   hint: string;
+  staffHint?: string;
   access: 'owner' | 'all';
 };
 
 const menu: MenuItem[] = [
-  { key: 'credit', label: 'Cộng điểm', icon: 'ri-coins-line', hint: 'cộng điểm cho khách', access: 'all' },
+  {
+    key: 'credit',
+    label: 'Cộng điểm',
+    icon: 'ri-coins-line',
+    hint: 'cộng điểm cho khách',
+    staffHint: 'cộng điểm cho khách của tôi',
+    access: 'all',
+  },
+  {
+    key: 'users',
+    label: 'Người dùng',
+    staffLabel: 'Khách của tôi',
+    icon: 'ri-group-line',
+    hint: 'toàn bộ khách & đại lý',
+    staffHint: 'khách qua link của tôi',
+    access: 'all',
+  },
+  {
+    key: 'agency',
+    label: 'Link đại lý',
+    icon: 'ri-links-line',
+    hint: 'miền đại lý từng admin',
+    staffHint: 'link đăng ký của tôi',
+    access: 'all',
+  },
   { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ', access: 'owner' },
   { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi', access: 'owner' },
-  { key: 'users', label: 'Người dùng', icon: 'ri-group-line', hint: 'coin & lịch sử', access: 'owner' },
-  { key: 'staff', label: 'Phân quyền admin', icon: 'ri-shield-user-line', hint: 'nhân viên & quyền', access: 'owner' },
+  { key: 'staff', label: 'Phân quyền admin', icon: 'ri-shield-user-line', hint: 'admin & đại lý', access: 'owner' },
   { key: 'content', label: 'Nội dung web', icon: 'ri-file-text-line', hint: 'chữ & ảnh', access: 'owner' },
 ];
 
@@ -94,7 +120,13 @@ export default function AdminPage() {
   }
 
   const isOwner = adminRole === 'owner';
-  const visibleMenu = menu.filter((item) => item.access === 'all' || isOwner);
+  const visibleMenu = menu
+    .filter((item) => item.access === 'all' || isOwner)
+    .map((item) => ({
+      ...item,
+      label: isOwner ? item.label : item.staffLabel || item.label,
+      hint: isOwner ? item.hint : item.staffHint || item.hint,
+    }));
   const currentView: View = visibleMenu.some((item) => item.key === view)
     ? view
     : visibleMenu[0].key;
@@ -120,7 +152,7 @@ export default function AdminPage() {
             </Link>
             <span className="hidden items-center gap-1.5 rounded-full border border-primary-500/30 bg-primary-500/10 px-2.5 py-1 font-mono text-[9px] tracking-[0.14em] text-primary-500 uppercase md:flex">
               <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-primary-500" />
-              {isOwner ? 'chủ web' : 'nhân viên'}
+              {isOwner ? 'chủ web' : 'admin đại lý'}
             </span>
           </div>
 
@@ -227,7 +259,7 @@ export default function AdminPage() {
                 </p>
                 <p className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
-                  quyền: {isOwner ? 'chủ web' : 'nhân viên'}
+                  quyền: {isOwner ? 'chủ web' : 'admin đại lý'}
                 </p>
               </div>
             </div>
@@ -244,6 +276,7 @@ export default function AdminPage() {
           {currentView === 'credit' && <CreditPanel />}
           {currentView === 'games' && <GamesPanel />}
           {currentView === 'users' && <UsersPanel />}
+          {currentView === 'agency' && <AgencyPanel />}
           {currentView === 'baccarat' && <BaccaratPanel />}
           {currentView === 'staff' && <StaffPanel />}
           {currentView === 'content' && <ContentPanel />}

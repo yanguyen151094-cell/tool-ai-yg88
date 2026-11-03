@@ -42,6 +42,10 @@ mô hình, lịch sử phiên.
       `baccarat_sessions`; trang quản trị có mục **Tài khoản Baccarat** để xem / lọc / chép / xoá,
       ưu tiên hiển thị các phiên "nhà cái khác" (mã ẩn còn khoá)
 - [ ] Kết nối backend thật cho tài khoản & coin (Phase 2)
+- [x] Hệ thống **admin đại lý**: chủ web tạo tài khoản admin cấp dưới, mỗi admin có mã/link đăng ký
+      riêng (`/login?ref=ma`), khách đăng ký qua link nào thì gắn vào đại lý đó; admin chỉ thấy khách
+      của mình, được cộng coin, xem thông tin liên hệ và cấp lại mật khẩu khách; chủ web thấy toàn bộ
+      khách + biết khách thuộc đại lý nào
 
 ---
 

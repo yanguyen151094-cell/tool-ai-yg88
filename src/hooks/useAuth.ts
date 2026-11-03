@@ -156,6 +156,7 @@ export function useAuth() {
       password: string;
       phone: string;
       telegram: string;
+      refCode?: string;
     }) => {
       const normalized = normalizePhone(input.phone);
       const { data, error: invokeError } = await supabase.functions.invoke('phone-auth', {
@@ -164,6 +165,7 @@ export function useAuth() {
           rawPhone: input.phone.trim(),
           password: input.password,
           telegram: input.telegram.trim(),
+          ref: input.refCode ?? '',
         },
       });
 
@@ -174,7 +176,7 @@ export function useAuth() {
       }
 
       const result = data as
-        | { ok?: boolean; email?: string; code?: string; message?: string }
+        | { ok?: boolean; email?: string; code?: string; message?: string; agent?: string | null }
         | null;
 
       if (!result || result.ok !== true || !result.email) {
@@ -187,7 +189,7 @@ export function useAuth() {
       });
       if (signInError) throw new Error(authMessage(signInError));
 
-      return { phone: normalized };
+      return { phone: normalized, agent: result.agent ?? null };
     },
     [],
   );

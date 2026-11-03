@@ -14,7 +14,7 @@ const json = (body: unknown) =>
 
 const DOMAIN = 'user.yg88.local';
 
-/** Chuẩn hoá số điện thoại Việt Nam về dạng 0xxxxxxxxx (10 số). */
+/** Chuan hoa so dien thoai Viet Nam ve dang 0xxxxxxxxx (10 so). */
 const normalizePhone = (raw: string) => {
   let digits = raw.replace(/\D/g, '');
   if (digits.startsWith('84') && digits.length === 11) digits = `0${digits.slice(2)}`;
@@ -58,6 +58,7 @@ Deno.serve(async (req: Request) => {
     password?: string;
     username?: string;
     telegram?: string;
+    ref?: string;
   };
   try {
     payload = await req.json();
@@ -69,6 +70,7 @@ Deno.serve(async (req: Request) => {
   const rawPhone = String(payload.rawPhone ?? '').trim();
   const password = String(payload.password ?? '');
   const telegram = normalizeTelegram(String(payload.telegram ?? ''));
+  const refCode = String(payload.ref ?? '').trim().slice(0, 32).toLowerCase();
 
   const slug = usernameSlug(username);
   if (slug.length < 3) {
@@ -110,6 +112,22 @@ Deno.serve(async (req: Request) => {
 
   const email = `${slug}@${DOMAIN}`;
 
+  /** Tim dai ly theo ma link gioi thieu. Khong hop le thi bo qua. */
+  let agentId: string | null = null;
+  let agentName: string | null = null;
+  if (refCode) {
+    const { data: agent } = await admin
+      .from('admin_users')
+      .select('user_id, username, ref_code, role')
+      .ilike('ref_code', refCode)
+      .limit(1)
+      .maybeSingle();
+    if (agent) {
+      agentId = agent.user_id;
+      agentName = agent.username ?? null;
+    }
+  }
+
   const { data: nameTaken } = await admin
     .from('profiles')
     .select('id')
@@ -149,6 +167,7 @@ Deno.serve(async (req: Request) => {
       username,
       phone: phone || null,
       telegram: telegram || null,
+      ref: refCode || null,
     },
   });
 
@@ -175,6 +194,7 @@ Deno.serve(async (req: Request) => {
       username,
       phone: phone || null,
       telegram: telegram || null,
+      agent_id: agentId,
     },
     { onConflict: 'id' },
   );
@@ -189,5 +209,6 @@ Deno.serve(async (req: Request) => {
     username,
     phone: phone || null,
     telegram: telegram || null,
+    agent: agentName,
   });
 });

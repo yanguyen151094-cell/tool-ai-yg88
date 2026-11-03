@@ -1,38 +1,42 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import type { PlayerProfile } from '@/hooks/useAuth';
 import { isSyntheticEmail, prettyPhone } from '@/lib/phone';
-import { deleteUserAccount, resetUserPassword, suggestPassword } from '@/lib/adminUsers';
-
-type CoinTx = {
-  id: string;
-  amount: number;
-  note: string | null;
-  created_at: string;
-};
+import {
+  creditCustomer,
+  customerHistory,
+  deleteCustomer,
+  listCustomers,
+  listStaff,
+  resetCustomerPassword,
+  suggestPassword,
+} from '@/lib/adminStaff';
+import type { CreditLog, CustomerRow, StaffRow } from '@/lib/adminStaff';
 
 const messageOf = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 const formatCoins = (value: number) => Number(value ?? 0).toLocaleString('vi-VN');
 
-const emailLabel = (row: PlayerProfile) => {
+const emailLabel = (row: CustomerRow) => {
   if (row.email && !isSyntheticEmail(row.email)) return row.email;
   if (row.phone) return `SĐT ${prettyPhone(row.phone)}`;
   if (row.telegram) return `@${row.telegram}`;
   return 'tài khoản nội bộ';
 };
 
-export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }) {
-  const { user } = useAuth();
-  const [rows, setRows] = useState<PlayerProfile[]>([]);
+export default function UsersPanel() {
+  const { adminRole, user } = useAuth();
+  const isOwner = adminRole === 'owner';
+
+  const [rows, setRows] = useState<CustomerRow[]>([]);
+  const [agents, setAgents] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
+  const [agentFilter, setAgentFilter] = useState('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [history, setHistory] = useState<CoinTx[]>([]);
+  const [history, setHistory] = useState<CreditLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -43,6 +47,15 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
   const [removeOpen, setRemoveOpen] = useState(false);
   const [accountBusy, setAccountBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const agentName = useCallback(
+    (id: string | null) => {
+      if (!id) return 'chưa gắn đại lý';
+      const found = agents.find((item) => item.user_id === id);
+      return found?.username || 'đại lý đã xoá';
+    },
+    [agents],
+  );
 
   const copyValue = async (label: string, value: string) => {
     try {
@@ -58,19 +71,22 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
     setLoading(true);
     setError('');
     try {
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id, email, username, coins, phone, telegram')
-        .order('created_at', { ascending: false })
-        .limit(500);
-      if (fetchError) throw fetchError;
-      setRows((data ?? []) as PlayerProfile[]);
+      const result = await listCustomers();
+      setRows(result.items ?? []);
+      if (isOwner) {
+        try {
+          const staffResult = await listStaff();
+          setAgents(staffResult.items ?? []);
+        } catch {
+          setAgents([]);
+        }
+      }
     } catch (caught) {
       setError(messageOf(caught, 'Không tải được danh sách người dùng.'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOwner]);
 
   useEffect(() => {
     load();
@@ -84,14 +100,8 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
   const loadHistory = useCallback(async (userId: string) => {
     setHistoryLoading(true);
     try {
-      const { data, error: fetchError } = await supabase
-        .from('coin_transactions')
-        .select('id, amount, note, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (fetchError) throw fetchError;
-      setHistory((data ?? []) as CoinTx[]);
+      const result = await customerHistory(userId);
+      setHistory(result.items ?? []);
     } catch {
       setHistory([]);
     } finally {
@@ -106,16 +116,25 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
 
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (!keyword) return rows;
-    return rows.filter(
-      (row) =>
+    const adminIds = new Set(agents.map((agent) => agent.user_id));
+    return rows.filter((row) => {
+      if (adminIds.has(row.id) || row.id === user?.id) return false;
+      if (agentFilter !== 'all' && (row.agent_id ?? '') !== agentFilter) return false;
+      if (!keyword) return true;
+      return (
         (row.username ?? '').toLowerCase().includes(keyword) ||
         (row.email ?? '').toLowerCase().includes(keyword) ||
         (row.phone ?? '').toLowerCase().includes(keyword) ||
         (row.telegram ?? '').toLowerCase().includes(keyword) ||
-        row.id.toLowerCase().includes(keyword),
-    );
-  }, [rows, query]);
+        row.id.toLowerCase().includes(keyword)
+      );
+    });
+  }, [rows, query, agentFilter, agents, user?.id]);
+
+  const totalCustomers = useMemo(() => {
+    const adminIds = new Set(agents.map((agent) => agent.user_id));
+    return rows.filter((row) => !adminIds.has(row.id) && row.id !== user?.id).length;
+  }, [rows, agents, user?.id]);
 
   const handleAdjust = async (direction: 1 | -1) => {
     if (!selected) return;
@@ -124,36 +143,27 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
       setError('Nhập số coin hợp lệ (lớn hơn 0).');
       return;
     }
-    const delta = parsed * direction;
-    const nextCoins = Number(selected.coins ?? 0) + delta;
-    if (nextCoins < 0) {
-      setError('Số dư sau khi trừ không được âm.');
+    if (direction === -1) {
+      if (Number(selected.coins ?? 0) - parsed < 0) {
+        setError('Số dư sau khi trừ không được âm.');
+        return;
+      }
+      setError('Chỉ chủ web được trừ coin. Đại lý chỉ cộng coin cho khách.');
       return;
     }
 
     setBusy(true);
     setError('');
     try {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ coins: nextCoins, updated_at: new Date().toISOString() })
-        .eq('id', selected.id);
-      if (updateError) throw updateError;
-
-      const { error: txError } = await supabase.from('coin_transactions').insert({
-        user_id: selected.id,
-        amount: delta,
-        note: note.trim() || (direction === 1 ? 'Admin cộng coin' : 'Admin trừ coin'),
-        created_by: user?.id ?? null,
-      });
-      if (txError) throw txError;
-
+      await creditCustomer(selected.id, parsed, note.trim());
       setRows((prev) =>
-        prev.map((row) => (row.id === selected.id ? { ...row, coins: nextCoins } : row)),
+        prev.map((row) =>
+          row.id === selected.id ? { ...row, coins: Number(row.coins ?? 0) + parsed } : row,
+        ),
       );
       setNotice(
-        `Đã ${direction === 1 ? 'cộng' : 'trừ'} ${formatCoins(parsed)} coin cho ${
-          selected.username || selected.email
+        `Đã cộng ${formatCoins(parsed)} coin cho ${
+          selected.username || selected.email || 'khách'
         }.`,
       );
       setAmount('');
@@ -177,10 +187,8 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
     setError('');
     setNotice('');
     try {
-      await resetUserPassword(selected.id, resetPassword.trim());
-      setNotice(
-        `Đã đặt lại mật khẩu cho ${name}. Gửi mật khẩu mới cho khách và nhắc họ đổi lại sau khi đăng nhập.`,
-      );
+      await resetCustomerPassword(selected.id, resetPassword.trim());
+      setNotice(`Đã cấp lại mật khẩu cho ${name}. Anh gửi mật khẩu mới cho khách giúp em.`);
       setResetOpen(false);
       setResetPassword('');
     } catch (caught) {
@@ -197,7 +205,7 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
     setError('');
     setNotice('');
     try {
-      await deleteUserAccount(selected.id);
+      await deleteCustomer(selected.id);
       setRows((prev) => prev.filter((row) => row.id !== selected.id));
       setHistory([]);
       setSelectedId(null);
@@ -219,19 +227,21 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="font-mono text-[10px] tracking-[0.2em] text-primary-500 uppercase">
-            $ users --list
+            $ users --{isOwner ? 'all' : 'my-agency'}
           </p>
           <h2 className="mt-1 font-heading text-xl font-bold text-foreground-950">
-            Quản lý người dùng
+            {isOwner ? 'Tất cả khách hàng' : 'Khách của đại lý tôi'}
           </h2>
           <p className="mt-1 text-sm text-foreground-500">
-            Xem tài khoản đã đăng ký, cộng hoặc trừ coin và theo dõi lịch sử giao dịch.
+            {isOwner
+              ? 'Xem toàn bộ khách của mọi đại lý, biết khách đăng ký dưới link nào, cộng coin và cấp lại mật khẩu.'
+              : 'Chỉ hiển thị những khách đăng ký qua link đại lý của bạn. Bạn được cộng coin và cấp lại mật khẩu cho họ.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="rounded-md border hairline bg-background-100/70 px-3 py-2 font-mono text-[11px]">
             <span className="text-foreground-600">tổng </span>
-            <span className="text-foreground-950">{rows.length}</span>
+            <span className="text-foreground-950">{totalCustomers}</span>
             <span className="text-foreground-600"> tài khoản</span>
           </div>
           <button
@@ -260,14 +270,31 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <div className="relative">
-            <i className="ri-search-line pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-foreground-600" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm theo tên, số điện thoại, telegram hoặc email..."
-              className={`${inputClass} pl-8`}
-            />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <i className="ri-search-line pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-[13px] text-foreground-600" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm theo tên, số điện thoại, telegram..."
+                className={`${inputClass} pl-8`}
+              />
+            </div>
+            {isOwner && (
+              <select
+                value={agentFilter}
+                onChange={(event) => setAgentFilter(event.target.value)}
+                className={`${inputClass} cursor-pointer sm:w-48`}
+              >
+                <option value="all">tất cả đại lý</option>
+                <option value="">chưa gắn đại lý</option>
+                {agents.map((agent) => (
+                  <option key={agent.user_id} value={agent.user_id}>
+                    {agent.username || agent.user_id.slice(0, 6)}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="mt-3 overflow-hidden rounded-lg border hairline">
@@ -279,8 +306,10 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14">
                 <i className="ri-user-search-line text-2xl text-foreground-600" />
-                <p className="mt-3 font-mono text-[12px] text-foreground-500">
-                  chưa có người dùng nào đăng ký
+                <p className="mt-3 text-center font-mono text-[12px] text-foreground-500">
+                  {totalCustomers === 0
+                    ? 'chưa có khách nào đăng ký qua link của bạn'
+                    : 'không có khách nào khớp bộ lọc'}
                 </p>
               </div>
             ) : (
@@ -318,9 +347,10 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                               ? 'chưa có liên hệ'
                               : row.email || row.id}
                       </span>
-                      {row.telegram && (
-                        <span className="mt-0.5 flex items-center gap-1 font-mono text-[9px] text-primary-500">
-                          <i className="ri-telegram-line" />@{row.telegram}
+                      {isOwner && (
+                        <span className="mt-0.5 flex items-center gap-1 font-mono text-[9px] text-secondary-500">
+                          <i className="ri-link" />
+                          {agentName(row.agent_id)}
                         </span>
                       )}
                     </span>
@@ -350,12 +380,23 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                   </p>
                 </div>
                 <div className="shrink-0 rounded-md border border-accent-500/30 bg-accent-500/10 px-2.5 py-1.5 text-right">
-                  <p className="font-mono text-[13px] text-accent-500">{formatCoins(selected.coins)}</p>
+                  <p className="font-mono text-[13px] text-accent-500">
+                    {formatCoins(selected.coins)}
+                  </p>
                   <p className="font-mono text-[9px] tracking-[0.12em] text-accent-500/80 uppercase">
                     coin
                   </p>
                 </div>
               </div>
+
+              {isOwner && (
+                <div className="mt-3 flex items-center gap-2 rounded-md border hairline bg-background-50/60 px-2.5 py-2">
+                  <i className="ri-links-line text-[13px] text-secondary-500" />
+                  <p className="min-w-0 flex-1 truncate font-mono text-[10px] text-foreground-500">
+                    đăng ký qua: <b className="text-foreground-300">{agentName(selected.agent_id)}</b>
+                  </p>
+                </div>
+              )}
 
               <div className="mt-3 rounded-md border hairline bg-background-50/60 p-2.5">
                 <p className="mb-2 font-mono text-[9px] tracking-[0.14em] text-foreground-600 uppercase">
@@ -420,12 +461,7 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                 </div>
               </div>
 
-              {!canAdjust && (
-                <p className="mt-4 rounded-md border hairline bg-background-50/60 px-3 py-2 font-mono text-[10px] text-foreground-500">
-                  Nhân viên chỉ cộng điểm ở tab "Cộng điểm".
-                </p>
-              )}
-              <div className={`mt-4 space-y-2 ${canAdjust ? '' : 'hidden'}`}>
+              <div className="mt-4 space-y-2">
                 <div>
                   <label className="mb-1.5 block font-mono text-[10px] tracking-[0.14em] text-foreground-600 uppercase">
                     Số coin
@@ -459,39 +495,41 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                     <i className="ri-add-line" />
                     cộng coin
                   </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleAdjust(-1)}
-                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-accent-500/50 px-3 py-2 font-mono text-[11px] font-bold whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10 disabled:opacity-60"
-                  >
-                    <i className="ri-subtract-line" />
-                    trừ coin
-                  </button>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleAdjust(-1)}
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-accent-500/50 px-3 py-2 font-mono text-[11px] font-bold whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10 disabled:opacity-60"
+                    >
+                      <i className="ri-subtract-line" />
+                      trừ coin
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {canAdjust && (
-                <div className="mt-5 border-t hairline pt-3">
-                  <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
-                    tài khoản đăng nhập
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetOpen((prev) => !prev);
-                        setResetPassword('');
-                        setShowPassword(false);
-                        setRemoveOpen(false);
-                        setError('');
-                        setNotice('');
-                      }}
-                      className="flex cursor-pointer items-center gap-1.5 rounded border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
-                    >
-                      <i className="ri-key-2-line" />
-                      cấp lại mật khẩu
-                    </button>
+              <div className="mt-5 border-t hairline pt-3">
+                <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
+                  tài khoản đăng nhập
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetOpen((prev) => !prev);
+                      setResetPassword('');
+                      setShowPassword(false);
+                      setRemoveOpen(false);
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="flex cursor-pointer items-center gap-1.5 rounded border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
+                  >
+                    <i className="ri-key-2-line" />
+                    cấp lại mật khẩu
+                  </button>
+                  {isOwner && (
                     <button
                       type="button"
                       onClick={() => {
@@ -506,89 +544,89 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
                       <i className="ri-user-unfollow-line" />
                       xóa tài khoản
                     </button>
-                  </div>
-
-                  {resetOpen && (
-                    <div className="mt-2 rounded-md border border-primary-500/30 bg-primary-500/5 p-2.5">
-                      <p className="font-mono text-[10px] text-foreground-500">
-                        Đặt mật khẩu mới cho {selected.username || 'khách'}. Khách đăng nhập lại bằng
-                        tên đăng nhập cũ cùng mật khẩu này.
-                      </p>
-                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                        <div className="relative min-w-0 flex-1">
-                          <input
-                            value={resetPassword}
-                            onChange={(event) => setResetPassword(event.target.value)}
-                            placeholder="Mật khẩu mới (từ 6 ký tự)"
-                            type={showPassword ? 'text' : 'password'}
-                            autoComplete="off"
-                            className={`${inputClass} pr-9`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                            title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                            className="absolute top-1/2 right-1.5 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-foreground-500 transition-colors hover:text-primary-500"
-                          >
-                            <i
-                              className={`text-[14px] ${
-                                showPassword ? 'ri-eye-off-line' : 'ri-eye-line'
-                              }`}
-                            />
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={accountBusy}
-                          onClick={() => {
-                            setResetPassword(suggestPassword());
-                            setShowPassword(true);
-                          }}
-                          className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border hairline px-3 py-2 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500 disabled:opacity-60"
-                        >
-                          <i className="ri-magic-line" />
-                          tạo tự động
-                        </button>
-                        <button
-                          type="button"
-                          disabled={accountBusy}
-                          onClick={handleResetPassword}
-                          className="cursor-pointer rounded-md bg-primary-500 px-4 py-2 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400 disabled:opacity-60"
-                        >
-                          lưu
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {removeOpen && (
-                    <div className="mt-2 rounded-md border border-accent-500/40 bg-accent-500/10 p-2.5">
-                      <p className="font-mono text-[10px] leading-relaxed text-accent-500">
-                        Xóa vĩnh viễn {selected.username || 'khách'}? Tài khoản đăng nhập, số coin,
-                        lịch sử giao dịch và phiên Baccarat sẽ mất và không khôi phục được.
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={accountBusy}
-                          onClick={handleDeleteUser}
-                          className="cursor-pointer rounded-md border border-accent-500/60 px-3 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10 disabled:opacity-60"
-                        >
-                          xác nhận xóa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRemoveOpen(false)}
-                          className="cursor-pointer rounded-md border hairline px-3 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-foreground-950"
-                        >
-                          hủy
-                        </button>
-                      </div>
-                    </div>
                   )}
                 </div>
-              )}
+
+                {resetOpen && (
+                  <div className="mt-2 rounded-md border border-primary-500/30 bg-primary-500/5 p-2.5">
+                    <p className="font-mono text-[10px] text-foreground-500">
+                      Đặt mật khẩu mới cho {selected.username || 'khách'}. Khách đăng nhập lại bằng
+                      tên đăng nhập cũ cùng mật khẩu này.
+                    </p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <div className="relative min-w-0 flex-1">
+                        <input
+                          value={resetPassword}
+                          onChange={(event) => setResetPassword(event.target.value)}
+                          placeholder="Mật khẩu mới (từ 6 ký tự)"
+                          type={showPassword ? 'text' : 'password'}
+                          autoComplete="off"
+                          className={`${inputClass} pr-9`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                          title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                          className="absolute top-1/2 right-1.5 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-foreground-500 transition-colors hover:text-primary-500"
+                        >
+                          <i
+                            className={`text-[14px] ${
+                              showPassword ? 'ri-eye-off-line' : 'ri-eye-line'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={accountBusy}
+                        onClick={() => {
+                          setResetPassword(suggestPassword());
+                          setShowPassword(true);
+                        }}
+                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border hairline px-3 py-2 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500 disabled:opacity-60"
+                      >
+                        <i className="ri-magic-line" />
+                        tạo tự động
+                      </button>
+                      <button
+                        type="button"
+                        disabled={accountBusy}
+                        onClick={handleResetPassword}
+                        className="cursor-pointer rounded-md bg-primary-500 px-4 py-2 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400 disabled:opacity-60"
+                      >
+                        lưu
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {removeOpen && isOwner && (
+                  <div className="mt-2 rounded-md border border-accent-500/40 bg-accent-500/10 p-2.5">
+                    <p className="font-mono text-[10px] leading-relaxed text-accent-500">
+                      Xóa vĩnh viễn {selected.username || 'khách'}? Tài khoản đăng nhập, số coin,
+                      lịch sử giao dịch và phiên Baccarat sẽ mất và không khôi phục được.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={accountBusy}
+                        onClick={handleDeleteUser}
+                        className="cursor-pointer rounded-md border border-accent-500/60 px-3 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10 disabled:opacity-60"
+                      >
+                        xác nhận xóa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRemoveOpen(false)}
+                        className="cursor-pointer rounded-md border hairline px-3 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-foreground-950"
+                      >
+                        hủy
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="mt-5 border-t hairline pt-3">
                 <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
@@ -628,7 +666,7 @@ export default function UsersPanel({ canAdjust = true }: { canAdjust?: boolean }
             <div className="flex h-full flex-col items-center justify-center rounded-lg border hairline bg-background-100/50 px-4 py-14">
               <i className="ri-user-settings-line text-2xl text-foreground-600" />
               <p className="mt-3 text-center font-mono text-[11px] text-foreground-500">
-                chọn một người dùng bên trái để cộng / trừ coin
+                chọn một người dùng bên trái để xem thông tin, cộng coin
               </p>
             </div>
           )}

@@ -99,7 +99,8 @@ export default function CreditPanel() {
       </p>
       <h2 className="mt-1 font-heading text-xl font-bold text-foreground-950">Cộng điểm cho khách</h2>
       <p className="mt-1 text-sm text-foreground-500">
-        Nhập đúng tên đăng nhập của khách để cộng điểm. Danh sách và thông tin khách được ẩn.
+        Nhập đúng tên đăng nhập của khách để cộng điểm. Admin đại lý chỉ tìm được khách đăng ký qua
+        link của mình.
       </p>
 
       {notice && (
