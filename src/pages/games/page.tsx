@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import AiStatusStrip from '@/components/feature/AiStatusStrip';
+import ChangePasswordModal from '@/components/feature/ChangePasswordModal';
 import ModeSwitch from './components/ModeSwitch';
 import SlotCard from './components/SlotCard';
 import BaccaratHackPanel from './components/BaccaratHackPanel';
@@ -50,6 +51,7 @@ export default function GamesPage() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const displayName = profile?.username || authUser?.email || null;
 
@@ -236,6 +238,15 @@ export default function GamesPage() {
                       quản trị
                     </Link>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setPasswordOpen(true)}
+                    className="ml-1 cursor-pointer text-foreground-500 transition-colors hover:text-primary-500"
+                    aria-label="Đổi mật khẩu"
+                    title="Đổi mật khẩu"
+                  >
+                    <i className="ri-lock-password-line" />
+                  </button>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -499,6 +510,12 @@ export default function GamesPage() {
         cost={HACK_COST}
         coins={coins}
         onSpend={spend}
+      />
+
+      <ChangePasswordModal
+        open={passwordOpen}
+        accountName={displayName}
+        onClose={() => setPasswordOpen(false)}
       />
     </div>
   );

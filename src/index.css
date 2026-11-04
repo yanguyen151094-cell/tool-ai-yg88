@@ -221,3 +221,72 @@ div[id*="netlify"][style*="position: fixed"] {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* ---- pháo hoa cho khung nhập mã thành công ---- */
+
+.firework {
+  position: absolute;
+  width: 0;
+  height: 0;
+  animation: firework-burst 2.1s ease-out infinite;
+}
+
+.firework-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: oklch(var(--primary-500));
+  box-shadow: 0 0 10px oklch(var(--primary-500) / 0.8);
+  animation: firework-fly 2.1s cubic-bezier(0.22, 0.7, 0.3, 1) infinite;
+}
+
+.firework-particle:nth-child(2n) {
+  background: oklch(var(--accent-500));
+  box-shadow: 0 0 10px oklch(var(--accent-500) / 0.75);
+}
+
+.firework-particle:nth-child(3n) {
+  background: oklch(var(--secondary-500));
+  box-shadow: 0 0 9px oklch(var(--secondary-500) / 0.7);
+  width: 5px;
+  height: 5px;
+}
+
+@keyframes firework-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes firework-fly {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(0) scale(0.4);
+  }
+  12% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.95;
+    transform: rotate(var(--angle)) translateY(calc(var(--distance) * -1)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(calc(var(--distance) * -1.35)) scale(0.55);
+  }
+}

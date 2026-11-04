@@ -1,21 +1,65 @@
 import type { HackLine } from './HackTerminal';
 
 /** Danh sách mã code chuyên nghiệp được chấp nhận khi nhập. */
-export const PROFESSIONAL_CODES = [
-  '8',
-  '18',
-  '38',
-  '68',
-  '88',
-  '188',
-  '288',
-  '588',
-  '1888',
-  '3888',
-];
+export const PROFESSIONAL_CODES = ['8', '18', '38', '68', '88', '188', '288', '588'];
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
 const randomChar = () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+
+/** Một khoá mã trong phiên quét: mã nhập + serial trích xuất + mệnh giá. */
+export type VaultCode = {
+  code: string;
+  serial: string;
+  amount: number;
+};
+
+/** Mệnh giá cố định của từng mã code (đồng) — theo đúng thang tiền Việt. */
+export const CODE_VALUES: Record<string, number> = {
+  '8': 8_000,
+  '18': 18_000,
+  '38': 38_000,
+  '68': 68_000,
+  '88': 88_000,
+  '188': 188_000,
+  '288': 288_000,
+  '588': 588_000,
+};
+
+/** Đổi chỗ + thay ký tự để mỗi khoá có một serial riêng. */
+const buildSerial = (base: string, index: number) => {
+  const chars = base.split('');
+  chars[index % chars.length] = randomChar();
+  const shift = (index + 1) % chars.length;
+  return chars.map((_, position) => chars[(position + shift) % chars.length]).join('');
+};
+
+/**
+ * Sinh danh sách 8 khoá mã của một phiên quét.
+ * Mệnh giá giữ đúng thang 8K → 588K, serial đổi mới mỗi lần quét phiên.
+ */
+export const buildVaultSession = (): VaultCode[] => {
+  const base = Array.from({ length: 8 }, randomChar).join('');
+  return PROFESSIONAL_CODES.map((code, index) => ({
+    code,
+    serial: buildSerial(base, index),
+    amount: CODE_VALUES[code],
+  }));
+};
+
+const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * Tìm khoá theo mã người dùng nhập: nhận cả mã số (1888) lẫn serial (GY27CM8Z).
+ */
+export const findVaultCode = (input: string, vault: VaultCode[]): VaultCode | null => {
+  const key = normalize(input);
+  if (!key) return null;
+  return (
+    vault.find((item) => normalize(item.serial) === key || normalize(item.code) === key) ?? null
+  );
+};
+
+export const formatVnd = (value: number) => `${Number(value).toLocaleString('vi-VN')}đ`;
 
 /**
  * Nhà cái thường: mỗi phiên quét lại bốc một tỷ lệ thắng mới trong khoảng 0 - 20%.
@@ -28,26 +72,6 @@ export const randomVaultRate = (previous: number) => {
   }
   return previous >= 20 ? 0 : previous + 1;
 };
-
-/**
- * Sinh loạt mã code dạng OZQL1CHF. Mỗi mã trong loạt thay đổi ký tự
- * hoặc thêm mới ký tự so với mã gốc của phiên.
- */
-export const buildLicenseCodes = (count = 7): string[] => {
-  const base = Array.from({ length: 8 }, randomChar).join('');
-  return Array.from({ length: count }, (_, index) => {
-    const chars = base.split('');
-    const position = (index * 3 + 1) % chars.length;
-    if (index % 2 === 0) {
-      chars[position] = randomChar();
-    } else {
-      chars.splice(position, 0, randomChar());
-    }
-    return chars.join('');
-  });
-};
-
-const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 export const isProfessionalCode = (value: string) =>
   PROFESSIONAL_CODES.includes(normalize(value));
@@ -96,13 +120,13 @@ export const buildBookmakerScript = (input: {
       ...head,
       { text: '[+] edge5 loaded · vendor bridge attached', tone: 'ok' },
       { text: 'scanning license descriptor table ... 0x2c4 / 0x310', tone: 'dim' },
-      { text: 'found vendor license table · 10 khoá hợp lệ', tone: 'ok' },
+      { text: 'found vendor license table · 8 khoá hợp lệ', tone: 'ok' },
       { text: 'decrypting key ring · aes-256-gcm · key 0x7bd1 verified', tone: 'ok' },
       { text: `extracting serial keys ... ${codes.length}/${codes.length}`, tone: 'dim' },
       ...codes.map((code) => ({ text: `  ${code}`, tone: 'ok' as const })),
       { text: 'kiểm tra quyền nhập code chuyên nghiệp ... admin hợp lệ', tone: 'dim' },
       { text: '✔ ĐÃ TRÍCH XUẤT MÃ CODE CHUYÊN NGHIỆP', tone: 'ok' },
-      { text: `bảng nhập code đã mở cho ${label} · 10 khoá 8→3888`, tone: 'ok' },
+      { text: `bảng nhập code đã mở cho ${label} · 8 khoá 8K→588K`, tone: 'ok' },
       { text: 'closing socket · session archived', tone: 'dim' },
     ];
   }

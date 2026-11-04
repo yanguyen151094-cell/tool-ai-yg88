@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { authMessage } from '@/lib/authErrors';
-import { accountToEmail, looksLikePhone, normalizePhone } from '@/lib/phone';
+import { accountToEmail, loginEmailCandidates, normalizePhone } from '@/lib/phone';
+import { resolveLoginEmail } from '@/lib/loginResolve';
 
 export type PlayerProfile = {
   id: string;
@@ -131,22 +132,25 @@ export function useAuth() {
     );
   }, [session?.user?.id, loadProfile]);
 
-  /** Đăng nhập bằng tên đăng nhập, số điện thoại hoặc email. */
+  /** Đăng nhập bằng tên đăng nhập, số điện thoại hoặc email (cả người chơi lẫn admin). */
   const signIn = useCallback(async (account: string, password: string) => {
     const value = account.trim();
-    const email = accountToEmail(value);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      if (looksLikePhone(value)) {
-        const detail = signInError.message.toLowerCase();
-        if (detail.includes('invalid login credentials')) {
-          throw new Error(
-            'Sai tên đăng nhập hoặc mật khẩu.\nNếu chưa có tài khoản, chuyển sang tab "Đăng ký" để tạo.',
-          );
-        }
-      }
+    const resolved = await resolveLoginEmail(value);
+    const candidates = loginEmailCandidates(value);
+    const targets = (resolved ? [resolved, ...candidates] : candidates.length > 0 ? candidates : [accountToEmail(value)])
+      .filter((item, index, list) => list.indexOf(item) === index);
+
+    for (const email of targets) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (!signInError) return;
+      const detail = signInError.message.toLowerCase();
+      if (detail.includes('invalid login credentials')) continue;
       throw new Error(authMessage(signInError));
     }
+
+    throw new Error(
+      'Sai tên đăng nhập hoặc mật khẩu.\nNếu chưa có tài khoản, chuyển sang tab "Đăng ký" để tạo. Admin dùng chung ô này với tên không dấu (ví dụ: yamato123).',
+    );
   }, []);
 
   /**

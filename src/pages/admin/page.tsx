@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import ChangePasswordModal from '@/components/feature/ChangePasswordModal';
 import AdminLogin from './components/AdminLogin';
 import GamesPanel from './components/GamesPanel';
 import UsersPanel from './components/UsersPanel';
@@ -58,6 +59,7 @@ export default function AdminPage() {
   const { user, profile, isAdmin, adminRole, loading, accessChecked, signOut } = useAuth();
   const [view, setView] = useState<View>('games');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   if (loading) {
     return (
@@ -164,12 +166,27 @@ export default function AdminPage() {
               </span>
             </div>
             <Link
+              to="/games"
+              className="hidden cursor-pointer items-center gap-1.5 rounded-md border border-primary-500/40 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-primary-500 transition-colors hover:bg-primary-500/10 md:flex"
+            >
+              <i className="ri-gamepad-line" />
+              chơi game
+            </Link>
+            <Link
               to="/"
               className="hidden cursor-pointer items-center gap-1.5 rounded-md border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500 sm:flex"
             >
               <i className="ri-external-link-line" />
               xem web
             </Link>
+            <button
+              type="button"
+              onClick={() => setPasswordOpen(true)}
+              className="hidden cursor-pointer items-center gap-1.5 rounded-md border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500 sm:flex"
+            >
+              <i className="ri-lock-password-line" />
+              đổi mật khẩu
+            </button>
             <button
               type="button"
               onClick={() => signOut()}
@@ -282,6 +299,12 @@ export default function AdminPage() {
           {currentView === 'content' && <ContentPanel />}
         </main>
       </div>
+
+      <ChangePasswordModal
+        open={passwordOpen}
+        accountName={profile?.username || user.email}
+        onClose={() => setPasswordOpen(false)}
+      />
     </div>
   );
 }

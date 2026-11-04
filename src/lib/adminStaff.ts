@@ -81,7 +81,7 @@ export const updateRefCode = (userId: string, refCode: string) =>
   });
 
 export const resetStaffPassword = (userId: string, password: string) =>
-  callAdminStaff({ action: 'reset_password', user_id: userId, password });
+  callAdminStaff<{ email: string }>({ action: 'reset_password', user_id: userId, password });
 
 export const setScanPermission = (userId: string, allowed: boolean) =>
   callAdminStaff<{ can_scan_bookmakers: boolean }>({
@@ -92,6 +92,10 @@ export const setScanPermission = (userId: string, allowed: boolean) =>
 
 export const removeStaff = (userId: string) =>
   callAdminStaff({ action: 'remove_staff', user_id: userId });
+
+/** Xóa hẳn tài khoản admin (chỉ chủ web). */
+export const deleteStaff = (userId: string) =>
+  callAdminStaff<{ username: string | null }>({ action: 'delete_staff', user_id: userId });
 
 // ---------- Dùng chung: khách hàng trong phạm vi được phép ----------
 export const listCustomers = () =>

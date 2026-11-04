@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import BookmakerScanModal from './BookmakerScanModal';
+import BookmakerLogo from './BookmakerLogo';
 import { bookmakers } from '@/mocks/bookmakers';
 import type { Bookmaker } from '@/mocks/bookmakers';
 
@@ -120,15 +121,11 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
               }`}
             >
               <div className="flex items-start gap-2.5">
-                <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border font-heading text-[12px] font-bold ${
-                    item.featured
-                      ? 'border-primary-500/50 bg-primary-500/15 text-primary-500'
-                      : 'border-background-300/60 bg-background-50/70 text-foreground-300'
-                  }`}
-                >
-                  {item.name.slice(0, 2).toUpperCase()}
-                </span>
+                <BookmakerLogo
+                  name={item.name}
+                  domain={item.domain}
+                  featured={Boolean(item.featured)}
+                />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <span className="truncate font-heading text-[13px] font-bold text-foreground-950">

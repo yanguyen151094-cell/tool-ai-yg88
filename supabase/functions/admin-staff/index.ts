@@ -75,6 +75,32 @@ Deno.serve(async (req: Request) => {
   const isOwner = me.role === 'owner';
   const staffName = me.username || caller.email?.split('@')[0] || 'nv';
 
+  /**
+   * Xac minh mat khau moi bang chinh dich vu dang nhap.
+   * Nho vay neu mat khau khong duoc luu dung, quan tri vien biet ngay thay vi bao "thanh cong" gia.
+   */
+  const verifyPassword = async (email: string, password: string) => {
+    if (!email) return { ok: false, message: 'Tai khoan khong co email noi bo.' };
+    try {
+      const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (response.ok) return { ok: true, message: '' };
+      const payload = (await response.json().catch(() => null)) as
+        | { error_description?: string; msg?: string; message?: string }
+        | null;
+      return {
+        ok: false,
+        message:
+          payload?.error_description || payload?.msg || payload?.message || `HTTP ${response.status}`,
+      };
+    } catch {
+      return { ok: false, message: 'Khong goi duoc dich vu dang nhap de xac minh.' };
+    }
+  };
+
   let body: Body;
   try {
     body = await req.json();
@@ -156,7 +182,7 @@ Deno.serve(async (req: Request) => {
     if (!targetId) return fail('Thieu khach can cong diem.');
     if (!Number.isFinite(amount) || amount <= 0) return fail('So diem phai lon hon 0.');
     if (amount > MAX_CREDIT) return fail('Moi lan chi duoc cong toi da 10.000.000 diem.');
-    if (targetId === caller.id) return fail('Khong the tu cong diem cho chinh minh.');
+    if (targetId === caller.id && !isOwner) return fail('Khong the tu cong diem cho chinh minh.');
 
     const { target, message } = await loadAllowedCustomer(targetId);
     if (!target) return fail(message);
@@ -191,9 +217,17 @@ Deno.serve(async (req: Request) => {
     if (password.length > 72) return fail('Mat khau toi da 72 ky tu.');
     const { target, message } = await loadAllowedCustomer(targetId);
     if (!target) return fail(message);
+    const { data: authUser } = await db.auth.admin.getUserById(targetId);
+    const email = authUser?.user?.email ?? '';
     const { error } = await db.auth.admin.updateUserById(targetId, { password });
     if (error) return fail(error.message);
-    return json({ ok: true, username: target.username });
+    const check = await verifyPassword(email, password);
+    if (!check.ok) {
+      return fail(
+        `Da dat mat khau nhung chua xac minh duoc (${check.message}). Anh thu lai giup em.`,
+      );
+    }
+    return json({ ok: true, username: target.username, email });
   }
 
   if (action === 'my_history') {
@@ -382,17 +416,53 @@ Deno.serve(async (req: Request) => {
   if (action === 'reset_password') {
     const password = String(body.password ?? '');
     if (password.length < 6) return fail('Mat khau can tu 6 ky tu.');
+    if (password.length > 72) return fail('Mat khau toi da 72 ky tu.');
     const targetId = String(body.user_id ?? '');
     const { data: target } = await db
       .from('admin_users')
-      .select('user_id')
+      .select('user_id, email, role')
+      .eq('user_id', targetId)
+      .in('role', ['staff', 'owner'])
+      .maybeSingle();
+    if (!target) return fail('Khong tim thay nhan vien.');
+    if (target.role === 'owner' && targetId !== caller.id) {
+      return fail('Khong the doi mat khau cua chu web khac.');
+    }
+    const { data: authUser } = await db.auth.admin.getUserById(targetId);
+    const email = target.email || authUser?.user?.email || '';
+    const { error } = await db.auth.admin.updateUserById(targetId, { password });
+    if (error) return fail(error.message);
+    const check = await verifyPassword(email, password);
+    if (!check.ok) {
+      return fail(
+        `Da dat mat khau nhung chua xac minh duoc (${check.message}). Anh thu lai giup em.`,
+      );
+    }
+    return json({ ok: true, email });
+  }
+
+  if (action === 'delete_staff') {
+    const targetId = String(body.user_id ?? '');
+    if (!targetId) return fail('Thieu admin can xoa.');
+    if (targetId === caller.id) return fail('Khong the xoa chinh tai khoan dang dang nhap.');
+    const { data: target } = await db
+      .from('admin_users')
+      .select('user_id, username, role')
       .eq('user_id', targetId)
       .eq('role', 'staff')
       .maybeSingle();
-    if (!target) return fail('Khong tim thay nhan vien.');
-    const { error } = await db.auth.admin.updateUserById(targetId, { password });
-    if (error) return fail(error.message);
-    return json({ ok: true });
+    if (!target) return fail('Khong tim thay admin can xoa.');
+
+    await db.from('admin_users').delete().eq('user_id', targetId);
+    await db.from('coin_transactions').delete().eq('user_id', targetId);
+    await db.from('coin_transactions').delete().eq('created_by', targetId);
+    await db.from('baccarat_sessions').delete().eq('user_id', targetId);
+    await db.from('profiles').delete().eq('id', targetId);
+    const { error } = await db.auth.admin.deleteUser(targetId);
+    if (error) {
+      return fail(`Da thu hoi quyen nhung chua xoa duoc tai khoan dang nhap: ${error.message}`);
+    }
+    return json({ ok: true, username: target.username });
   }
 
   if (action === 'remove_staff') {

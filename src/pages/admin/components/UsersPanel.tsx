@@ -118,7 +118,8 @@ export default function UsersPanel() {
     const keyword = query.trim().toLowerCase();
     const adminIds = new Set(agents.map((agent) => agent.user_id));
     return rows.filter((row) => {
-      if (adminIds.has(row.id) || row.id === user?.id) return false;
+      if (adminIds.has(row.id)) return false;
+      if (row.id === user?.id && !isOwner) return false;
       if (agentFilter !== 'all' && (row.agent_id ?? '') !== agentFilter) return false;
       if (!keyword) return true;
       return (
@@ -129,12 +130,12 @@ export default function UsersPanel() {
         row.id.toLowerCase().includes(keyword)
       );
     });
-  }, [rows, query, agentFilter, agents, user?.id]);
+  }, [rows, query, agentFilter, agents, user?.id, isOwner]);
 
   const totalCustomers = useMemo(() => {
     const adminIds = new Set(agents.map((agent) => agent.user_id));
-    return rows.filter((row) => !adminIds.has(row.id) && row.id !== user?.id).length;
-  }, [rows, agents, user?.id]);
+    return rows.filter((row) => !adminIds.has(row.id) && (row.id !== user?.id || isOwner)).length;
+  }, [rows, agents, user?.id, isOwner]);
 
   const handleAdjust = async (direction: 1 | -1) => {
     if (!selected) return;

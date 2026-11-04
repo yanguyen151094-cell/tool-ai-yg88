@@ -1,37 +1,31 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { PROFESSIONAL_CODES, isProfessionalCode } from './bookmakerScript';
+import CodeClaimModal from './CodeClaimModal';
+import BookmakerLogo from './BookmakerLogo';
+import { formatVnd } from './bookmakerScript';
+import type { VaultCode } from './bookmakerScript';
 import type { Bookmaker } from '@/mocks/bookmakers';
 
 type Props = {
   bookmaker: Bookmaker;
   preferred: boolean;
   winRate: number;
-  codes: string[];
+  vault: VaultCode[];
   canUseCodes: boolean;
   onRescan: () => void;
   onClose: () => void;
 };
 
-const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
 export default function BookmakerResult({
   bookmaker,
   preferred,
   winRate,
-  codes,
+  vault,
   canUseCodes,
   onRescan,
   onClose,
 }: Props) {
   const [copied, setCopied] = useState('');
-  const [entryCode, setEntryCode] = useState('');
-  const [entryState, setEntryState] = useState<'idle' | 'ok' | 'err'>('idle');
-  const [entryMessage, setEntryMessage] = useState('');
-  const [account, setAccount] = useState('');
-  const [claimCode, setClaimCode] = useState('');
-  const [claimError, setClaimError] = useState('');
-  const [claim, setClaim] = useState<{ account: string; code: string } | null>(null);
+  const [claimOpen, setClaimOpen] = useState(false);
 
   const copyCode = async (value: string) => {
     try {
@@ -43,48 +37,23 @@ export default function BookmakerResult({
     }
   };
 
-  const submitEntry = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!isProfessionalCode(entryCode)) {
-      setEntryState('err');
-      setEntryMessage(
-        'Mã code chưa đúng. Chỉ dùng các khoá chuyên nghiệp: 8 · 18 · 38 · 68 · 88 · 188 · 288 · 588 · 1888 · 3888.',
-      );
-      return;
-    }
-    setEntryState('ok');
-    setEntryMessage(
-      `Mã code ${normalize(entryCode)} đã được xác thực thành công cho ${bookmaker.name}.`,
-    );
-    setClaimCode((prev) => prev || normalize(entryCode));
-  };
-
-  const submitClaim = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!account.trim()) {
-      setClaimError('Nhập tên tài khoản trước đã.');
-      setClaim(null);
-      return;
-    }
-    if (!isProfessionalCode(claimCode)) {
-      setClaimError('Mã code không hợp lệ, nhập lại khoá chuyên nghiệp 8 → 3888.');
-      setClaim(null);
-      return;
-    }
-    setClaimError('');
-    setClaim({ account: account.trim(), code: normalize(claimCode) });
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border hairline bg-background-50/70 px-3 py-2.5">
-        <div className="min-w-0">
-          <p className="truncate font-heading text-[14px] font-bold text-foreground-950">
-            {bookmaker.name}
-          </p>
-          <p className="truncate font-mono text-[9px] tracking-[0.1em] text-foreground-600 uppercase">
-            {bookmaker.domain} · {bookmaker.region} · phiên quét đã kết thúc
-          </p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <BookmakerLogo
+            name={bookmaker.name}
+            domain={bookmaker.domain}
+            featured={Boolean(bookmaker.featured)}
+          />
+          <div className="min-w-0">
+            <p className="truncate font-heading text-[14px] font-bold text-foreground-950">
+              {bookmaker.name}
+            </p>
+            <p className="truncate font-mono text-[9px] tracking-[0.1em] text-foreground-600 uppercase">
+              {bookmaker.domain} · {bookmaker.region} · phiên quét đã kết thúc
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -188,181 +157,85 @@ export default function BookmakerResult({
                   $ license --export
                 </p>
                 <p className="mt-1 font-heading text-[14px] font-bold text-foreground-950">
-                  Loạt mã code chuyên nghiệp của {bookmaker.name}
+                  Loạt 8 mã code chuyên nghiệp của {bookmaker.name}
                 </p>
               </div>
               <span className="rounded-full border border-primary-500/40 bg-primary-500/10 px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-primary-500 uppercase">
-                {codes.length} khoá · đã giải
+                {vault.length} khoá · đã giải
               </span>
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              {codes.map((code, index) => (
+              {vault.map((item, index) => (
                 <div
-                  key={code}
+                  key={item.serial}
                   className="flex items-center gap-2 rounded border hairline bg-background-50/80 px-2 py-1.5"
                 >
                   <span className="w-4 shrink-0 font-mono text-[9px] text-foreground-600 tabular-nums">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className="min-w-0 flex-1 truncate font-mono text-[12px] tracking-[0.1em] text-primary-500">
-                    {code}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-mono text-[12px] tracking-[0.1em] text-primary-500">
+                      {item.serial}
+                    </span>
+                    <span className="block truncate font-mono text-[9px] text-foreground-600 tabular-nums">
+                      mã {item.code} · {formatVnd(item.amount)}
+                    </span>
                   </span>
                   <button
                     type="button"
-                    onClick={() => copyCode(code)}
+                    onClick={() => copyCode(item.serial)}
                     className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded border hairline text-foreground-500 transition-colors hover:text-primary-500"
-                    aria-label={`Chép mã ${code}`}
+                    aria-label={`Chép mã ${item.serial}`}
                   >
-                    <i className={copied === code ? 'ri-check-line text-[11px]' : 'ri-file-copy-line text-[11px]'} />
+                    <i
+                      className={
+                        copied === item.serial ? 'ri-check-line text-[11px]' : 'ri-file-copy-line text-[11px]'
+                      }
+                    />
                   </button>
                 </div>
               ))}
             </div>
             <p className="mt-2.5 font-mono text-[9px] leading-relaxed text-foreground-600">
-              Mỗi phiên quét sẽ thay đổi ký tự hoặc thêm ký tự mới vào loạt mã — bấm “quét lại phiên
-              mới” để lấy loạt mã khác.
+              Mỗi khoá có mệnh giá riêng trong thang 8K – 588K. Quét lại phiên mới sẽ đổi serial
+              của từng khoá.
             </p>
           </div>
 
-          <form
-            onSubmit={submitEntry}
-            className="rounded-md border hairline bg-background-50/60 p-3.5"
-          >
+          <div className="rounded-md border hairline bg-background-50/60 p-3.5">
             <p className="font-mono text-[9px] tracking-[0.16em] text-foreground-600 uppercase">
               nhập code chuyên nghiệp
             </p>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input
-                value={entryCode}
-                onChange={(event) => {
-                  setEntryCode(event.target.value);
-                  setEntryState('idle');
-                  setEntryMessage('');
-                }}
-                placeholder="Nhập mã code (vd: 1888)"
-                autoComplete="off"
-                spellCheck={false}
-                className="w-full min-w-0 rounded border border-background-300/50 bg-background-50/80 px-3 py-2 font-mono text-[12px] tracking-[0.08em] text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60"
-              />
-              <button
-                type="submit"
-                className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary-500 px-4 py-2 font-mono text-[11px] font-semibold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400"
-              >
-                <i className="ri-shield-keyhole-line" />
-                xác thực mã
-              </button>
-            </div>
-
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {PROFESSIONAL_CODES.map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => {
-                    setEntryCode(code);
-                    setEntryState('idle');
-                    setEntryMessage('');
-                  }}
-                  className={`cursor-pointer rounded border px-2 py-1 font-mono text-[10px] whitespace-nowrap transition-colors ${
-                    normalize(entryCode) === code
-                      ? 'border-primary-500/60 bg-primary-500/15 text-primary-500'
-                      : 'border-background-300/50 bg-background-50/60 text-foreground-500 hover:text-foreground-950'
-                  }`}
-                >
-                  {code}
-                </button>
-              ))}
-            </div>
-
-            {entryState !== 'idle' && (
-              <div
-                className={`mt-2.5 flex items-start gap-2 rounded border px-3 py-2 ${
-                  entryState === 'ok'
-                    ? 'border-primary-500/40 bg-primary-500/10'
-                    : 'border-accent-500/40 bg-accent-500/10'
-                }`}
-              >
-                <i
-                  className={`mt-0.5 text-[13px] ${
-                    entryState === 'ok'
-                      ? 'ri-checkbox-circle-line text-primary-500'
-                      : 'ri-error-warning-line text-accent-500'
-                  }`}
-                />
-                <p
-                  className={`font-mono text-[10px] leading-relaxed ${
-                    entryState === 'ok' ? 'text-primary-500' : 'text-accent-500'
-                  }`}
-                >
-                  {entryMessage}
-                </p>
-              </div>
-            )}
-          </form>
-
-          <form onSubmit={submitClaim} className="rounded-md border hairline bg-background-50/60 p-3.5">
-            <p className="font-mono text-[9px] tracking-[0.16em] text-foreground-600 uppercase">
-              nhập tên tài khoản &amp; mã code
-            </p>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <input
-                value={account}
-                onChange={(event) => {
-                  setAccount(event.target.value);
-                  setClaimError('');
-                }}
-                placeholder="Tên tài khoản khách"
-                autoComplete="off"
-                spellCheck={false}
-                className="w-full min-w-0 rounded border border-background-300/50 bg-background-50/80 px-3 py-2 font-mono text-[12px] text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60"
-              />
-              <input
-                value={claimCode}
-                onChange={(event) => {
-                  setClaimCode(event.target.value);
-                  setClaimError('');
-                }}
-                placeholder="Mã code (vd: 588)"
-                autoComplete="off"
-                spellCheck={false}
-                className="w-full min-w-0 rounded border border-background-300/50 bg-background-50/80 px-3 py-2 font-mono text-[12px] tracking-[0.08em] text-foreground-950 placeholder:text-foreground-600 focus:border-primary-500/60"
-              />
-            </div>
             <button
-              type="submit"
-              className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md bg-accent-500 px-4 py-2 font-mono text-[11px] font-semibold whitespace-nowrap text-background-50 transition-colors hover:bg-accent-500/85"
+              type="button"
+              onClick={() => setClaimOpen(true)}
+              className="mt-2 flex w-full cursor-pointer items-center gap-2.5 rounded-md border border-primary-500/35 bg-background-50/80 px-3 py-3 text-left transition-colors hover:border-primary-500/70 hover:bg-primary-500/5"
             >
-              <i className="ri-award-line" />
-              gửi mã chúc mừng
+              <i className="ri-qr-scan-2-line text-[16px] text-primary-500" />
+              <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-foreground-500">
+                Nhập mã code (vd: 588)
+              </span>
+              <span className="flex shrink-0 items-center gap-1 rounded border border-primary-500/45 px-2 py-1 font-mono text-[10px] whitespace-nowrap text-primary-500">
+                <i className="ri-external-link-line text-[11px]" />
+                mở
+              </span>
             </button>
-
-            {claimError && (
-              <p className="mt-2 flex items-start gap-2 font-mono text-[10px] leading-relaxed text-accent-500">
-                <i className="ri-error-warning-line mt-0.5" />
-                {claimError}
-              </p>
-            )}
-
-            {claim && (
-              <div className="mt-2.5 overflow-hidden rounded-md border border-primary-500/40 bg-primary-500/10 p-3">
-                <p className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.18em] text-primary-500 uppercase">
-                  <i className="ri-sparkling-2-line" />
-                  tin nhắn chúc mừng
-                </p>
-                <p className="mt-1.5 font-heading text-[14px] font-bold text-foreground-950">
-                  Chúc mừng {claim.account}!
-                </p>
-                <p className="mt-1 font-mono text-[10px] leading-relaxed text-foreground-400">
-                  Tài khoản <span className="text-foreground-950">{claim.account}</span> đã nhận mã
-                  chuyên nghiệp <span className="text-primary-500">{claim.code}</span> tại{' '}
-                  {bookmaker.name}. Hệ thống đã ghi nhận và kích hoạt ưu đãi cho phiên này.
-                </p>
-              </div>
-            )}
-          </form>
+            <p className="mt-2 font-mono text-[9px] leading-relaxed text-foreground-600">
+              Bấm vào ô trên để mở cửa sổ nhập <span className="text-foreground-300">mã code</span>{' '}
+              và <span className="text-foreground-300">tên tài khoản</span>. Nhập đúng mã sẽ báo
+              thành công kèm số tiền của mã đó.
+            </p>
+          </div>
         </>
       )}
+
+      <CodeClaimModal
+        open={claimOpen}
+        vault={vault}
+        bookmakerName={bookmaker.name}
+        onClose={() => setClaimOpen(false)}
+      />
     </div>
   );
 }

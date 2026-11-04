@@ -3,9 +3,10 @@ import BookmakerConsole from './BookmakerConsole';
 import BookmakerResult from './BookmakerResult';
 import {
   buildBookmakerScript,
-  buildLicenseCodes,
+  buildVaultSession,
   randomVaultRate,
 } from './bookmakerScript';
+import type { VaultCode } from './bookmakerScript';
 import type { Bookmaker } from '@/mocks/bookmakers';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
@@ -14,7 +15,7 @@ type Phase = 'running' | 'result';
 type Session = {
   preferred: boolean;
   winRate: number;
-  codes: string[];
+  vault: VaultCode[];
 };
 
 type Props = {
@@ -27,13 +28,13 @@ type Props = {
 const createSession = (preferred: boolean, previousRate = -1): Session => ({
   preferred,
   winRate: preferred ? 88 : randomVaultRate(previousRate),
-  codes: preferred ? buildLicenseCodes(7) : [],
+  vault: preferred ? buildVaultSession() : [],
 });
 
 export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>('running');
   const [shown, setShown] = useState(0);
-  const [session, setSession] = useState<Session>({ preferred: false, winRate: 0, codes: [] });
+  const [session, setSession] = useState<Session>({ preferred: false, winRate: 0, vault: [] });
   useBodyScrollLock(open);
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
             code: bookmaker.id,
             preferred: session.preferred,
             winRate: session.winRate,
-            licenseCodes: session.codes,
+            licenseCodes: session.vault.map((item) => item.serial),
           })
         : [],
     [bookmaker, session],
@@ -141,7 +142,7 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
               bookmaker={bookmaker}
               preferred={session.preferred}
               winRate={session.winRate}
-              codes={session.codes}
+              vault={session.vault}
               canUseCodes={canUseCodes}
               onRescan={rescan}
               onClose={onClose}

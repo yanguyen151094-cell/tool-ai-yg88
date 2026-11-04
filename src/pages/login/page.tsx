@@ -71,7 +71,7 @@ export default function LoginPage() {
 
     const data = new FormData(event.currentTarget);
     const account = String(data.get('account') ?? '').trim();
-    const password = String(data.get('password') ?? '').trim();
+    const password = String(data.get('password') ?? '');
     const username = String(data.get('username') ?? '').trim();
     const phone = String(data.get('phone') ?? '').trim();
     const telegram = normalizeTelegram(String(data.get('telegram') ?? ''));
@@ -372,6 +372,18 @@ export default function LoginPage() {
                     </>
                   )}
                 </button>
+
+                {mode === 'login' && (
+                  <p className="flex items-start gap-1.5 font-mono text-[9px] leading-relaxed text-foreground-600">
+                    <i className="ri-shield-keyhole-line mt-0.5 text-[11px] text-secondary-500" />
+                    <span>
+                      Quản trị viên cũng đăng nhập được tại đây bằng tên không dấu (vd:{' '}
+                      <strong className="text-secondary-500">admin</strong>,{' '}
+                      <strong className="text-secondary-500">yamato123</strong>) và mật khẩu quản
+                      trị.
+                    </span>
+                  </p>
+                )}
               </form>
 
               <div className="mt-3 rounded-md border border-primary-500/30 bg-primary-500/5 p-3">

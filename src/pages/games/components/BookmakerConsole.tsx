@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import BookmakerLogo from './BookmakerLogo';
 import type { HackLine, HackTone } from './HackTerminal';
 
 const toneClass: Record<HackTone, string> = {
@@ -64,13 +65,16 @@ export default function BookmakerConsole({ name, code, lines, shown, running, pr
 
       <div className="p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate font-heading text-[13px] font-semibold text-foreground-950">
-              {name}
-            </p>
-            <p className="truncate font-mono text-[9px] tracking-[0.08em] text-foreground-600">
-              {code} · region ap-sg-1 · quét mã code nhà cái
-            </p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <BookmakerLogo name={name} domain={code} size="sm" />
+            <div className="min-w-0">
+              <p className="truncate font-heading text-[13px] font-semibold text-foreground-950">
+                {name}
+              </p>
+              <p className="truncate font-mono text-[9px] tracking-[0.08em] text-foreground-600">
+                {code} · region ap-sg-1 · quét mã code nhà cái
+              </p>
+            </div>
           </div>
           <span className="flex shrink-0 items-baseline gap-1 font-mono text-primary-500">
             <span className="text-lg font-bold tabular-nums">{progress}</span>

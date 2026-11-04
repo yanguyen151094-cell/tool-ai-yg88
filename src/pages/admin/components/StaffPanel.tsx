@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   buildRefLink,
   createStaff,
+  deleteStaff,
   listStaff,
   removeStaff,
   resetStaffPassword,
   setScanPermission,
+  suggestPassword,
   updateRefCode,
 } from '@/lib/adminStaff';
 import type { StaffRow } from '@/lib/adminStaff';
@@ -27,6 +29,8 @@ export default function StaffPanel() {
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [resetDone, setResetDone] = useState<{ username: string; password: string } | null>(null);
   const [editRefId, setEditRefId] = useState<string | null>(null);
   const [editRefValue, setEditRefValue] = useState('');
 
@@ -280,6 +284,7 @@ export default function StaffPanel() {
                         setEditRefValue(row.ref_code ?? '');
                         setResetId(null);
                         setRemoveId(null);
+                        setDeleteId(null);
                       }}
                       className="flex cursor-pointer items-center gap-1 rounded border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
                     >
@@ -291,7 +296,9 @@ export default function StaffPanel() {
                       onClick={() => {
                         setResetId(resetId === row.user_id ? null : row.user_id);
                         setResetPassword('');
+                        setResetDone(null);
                         setRemoveId(null);
+                        setDeleteId(null);
                         setEditRefId(null);
                       }}
                       className="flex cursor-pointer items-center gap-1 rounded border hairline px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
@@ -305,11 +312,25 @@ export default function StaffPanel() {
                         setRemoveId(removeId === row.user_id ? null : row.user_id);
                         setResetId(null);
                         setEditRefId(null);
+                        setDeleteId(null);
                       }}
                       className="flex cursor-pointer items-center gap-1 rounded border border-accent-500/40 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10"
                     >
                       <i className="ri-user-unfollow-line" />
                       thu hồi quyền
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteId(deleteId === row.user_id ? null : row.user_id);
+                        setRemoveId(null);
+                        setResetId(null);
+                        setEditRefId(null);
+                      }}
+                      className="flex cursor-pointer items-center gap-1 rounded border border-accent-500/40 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500/10"
+                    >
+                      <i className="ri-delete-bin-6-line" />
+                      xóa admin
                     </button>
                   </div>
 
@@ -341,27 +362,84 @@ export default function StaffPanel() {
                   )}
 
                   {resetId === row.user_id && (
-                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                      <input
-                        value={resetPassword}
-                        onChange={(event) => setResetPassword(event.target.value)}
-                        placeholder="Mật khẩu mới (từ 6 ký tự)"
-                        autoComplete="off"
-                        className={inputClass}
-                      />
+                    <div className="mt-2 rounded-md border border-primary-500/30 bg-primary-500/5 p-2.5">
+                      <p className="font-mono text-[10px] leading-relaxed text-foreground-500">
+                        Mật khẩu mới cho <b className="text-foreground-300">{row.username}</b>. Hệ
+                        thống sẽ thử đăng nhập lại bằng mật khẩu này để chắc chắn dùng được.
+                      </p>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <input
+                          value={resetPassword}
+                          onChange={(event) => {
+                            setResetPassword(event.target.value);
+                            setResetDone(null);
+                          }}
+                          placeholder="Mật khẩu mới (từ 6 ký tự)"
+                          autoComplete="off"
+                          className={inputClass}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setResetPassword(suggestPassword())}
+                          className="flex cursor-pointer items-center justify-center gap-1 rounded-md border hairline px-3 py-2.5 font-mono text-[10px] whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
+                        >
+                          <i className="ri-magic-line" />
+                          tạo tự động
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            const value = resetPassword;
+                            run(async () => {
+                              await resetStaffPassword(row.user_id, value);
+                              setResetId(null);
+                              setResetPassword('');
+                              setResetDone({ username: row.username ?? '', password: value });
+                            }, '');
+                          }}
+                          className="cursor-pointer rounded-md bg-primary-500 px-4 py-2.5 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 hover:bg-primary-400 disabled:opacity-60"
+                        >
+                          lưu
+                        </button>
+                      </div>
+                      {resetDone && resetDone.username === row.username && (
+                        <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-primary-500/40 bg-primary-500/10 px-2.5 py-2">
+                          <p className="min-w-0 flex-1 font-mono text-[10px] leading-relaxed text-primary-500">
+                            đã đổi · gửi admin này mật khẩu{' '}
+                            <b className="tracking-[0.08em]">{resetDone.password}</b>
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => copyLink(resetDone.password)}
+                            className="flex cursor-pointer items-center gap-1 rounded border border-primary-500/40 px-2 py-1 font-mono text-[10px] whitespace-nowrap text-primary-500 hover:bg-primary-500/10"
+                          >
+                            <i className="ri-file-copy-line" />
+                            chép
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {deleteId === row.user_id && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2">
+                      <p className="min-w-0 flex-1 font-mono text-[11px] leading-relaxed text-accent-500">
+                        Xóa hẳn tài khoản admin {row.username}? Tài khoản đăng nhập và quyền quản trị
+                        sẽ mất, không khôi phục được. Muốn chỉ khóa tạm thì dùng "thu hồi quyền".
+                      </p>
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() =>
                           run(async () => {
-                            await resetStaffPassword(row.user_id, resetPassword);
-                            setResetId(null);
-                            setResetPassword('');
-                          }, `Đã đổi mật khẩu cho ${row.username}.`)
+                            await deleteStaff(row.user_id);
+                            setDeleteId(null);
+                          }, `Đã xóa tài khoản admin ${row.username}.`)
                         }
-                        className="cursor-pointer rounded-md bg-primary-500 px-4 py-2.5 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 hover:bg-primary-400 disabled:opacity-60"
+                        className="cursor-pointer rounded-md border border-accent-500/60 px-3 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap text-accent-500 hover:bg-accent-500/10 disabled:opacity-60"
                       >
-                        lưu
+                        xác nhận xóa
                       </button>
                     </div>
                   )}
