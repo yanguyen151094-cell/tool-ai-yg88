@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react';
 type Props = {
   name: string;
   domain: string;
-  size?: 'sm' | 'md' | 'lg';
+  logoUrl?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   featured?: boolean;
 };
 
@@ -11,6 +12,14 @@ const SIZES = {
   sm: 'h-7 w-7 rounded text-[10px]',
   md: 'h-9 w-9 rounded-md text-[11px]',
   lg: 'h-11 w-11 rounded-md text-[13px]',
+  xl: 'h-14 w-14 rounded-lg text-[15px]',
+} as const;
+
+const PADDING = {
+  sm: 'p-0.5',
+  md: 'p-1',
+  lg: 'p-1',
+  xl: 'p-1.5',
 } as const;
 
 const TONES = ['primary', 'accent', 'secondary'] as const;
@@ -39,19 +48,30 @@ const markOf = (name: string) => {
 };
 
 /**
- * Logo nhà cái: thử logo thật theo tên miền trước, nếu không có thì luôn
- * hiển thị một ô nhận diện thương hiệu có màu riêng — không bao giờ để trống.
+ * Logo nhà cái: ưu tiên ảnh do chủ web tải lên, sau đó logo thật theo tên miền,
+ * cuối cùng là huy hiệu nhận diện thương hiệu — không bao giờ để trống.
  */
-export default function BookmakerLogo({ name, domain, size = 'md', featured = false }: Props) {
+export default function BookmakerLogo({
+  name,
+  domain,
+  logoUrl = '',
+  size = 'md',
+  featured = false,
+}: Props) {
   const [step, setStep] = useState(0);
 
   const tone: Tone = TONES[hashOf(name) % TONES.length];
   const mark = markOf(name);
 
-  const sources = useMemo(
-    () => [`https://logo.clearbit.com/${domain}`, `https://icon.horse/icon/${domain}`],
-    [domain],
-  );
+  const sources = useMemo(() => {
+    const list: string[] = [];
+    if (logoUrl) list.push(logoUrl);
+    if (domain) {
+      list.push(`https://logo.clearbit.com/${domain}`);
+      list.push(`https://icon.horse/icon/${domain}`);
+    }
+    return list;
+  }, [domain, logoUrl]);
 
   if (step >= sources.length) {
     return (
@@ -79,7 +99,7 @@ export default function BookmakerLogo({ name, domain, size = 'md', featured = fa
         title={`${name} logo`}
         referrerPolicy="no-referrer"
         onError={() => setStep((prev) => prev + 1)}
-        className="h-full w-full object-contain p-1"
+        className={`h-full w-full object-contain ${PADDING[size]}`}
       />
     </span>
   );

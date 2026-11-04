@@ -7,7 +7,7 @@ import {
   randomVaultRate,
 } from './bookmakerScript';
 import type { VaultCode } from './bookmakerScript';
-import type { Bookmaker } from '@/mocks/bookmakers';
+import type { Bookmaker } from '@/lib/bookmakers';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 type Phase = 'running' | 'result';
@@ -131,6 +131,7 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
             <BookmakerConsole
               name={bookmaker.name}
               code={bookmaker.domain}
+              logoUrl={bookmaker.logoUrl}
               lines={lines}
               shown={shown}
               running

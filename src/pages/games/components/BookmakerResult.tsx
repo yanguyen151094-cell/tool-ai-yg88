@@ -3,7 +3,7 @@ import CodeClaimModal from './CodeClaimModal';
 import BookmakerLogo from './BookmakerLogo';
 import { formatVnd } from './bookmakerScript';
 import type { VaultCode } from './bookmakerScript';
-import type { Bookmaker } from '@/mocks/bookmakers';
+import type { Bookmaker } from '@/lib/bookmakers';
 
 type Props = {
   bookmaker: Bookmaker;
@@ -44,7 +44,8 @@ export default function BookmakerResult({
           <BookmakerLogo
             name={bookmaker.name}
             domain={bookmaker.domain}
-            featured={Boolean(bookmaker.featured)}
+            logoUrl={bookmaker.logoUrl}
+            featured={bookmaker.featured}
           />
           <div className="min-w-0">
             <p className="truncate font-heading text-[14px] font-bold text-foreground-950">

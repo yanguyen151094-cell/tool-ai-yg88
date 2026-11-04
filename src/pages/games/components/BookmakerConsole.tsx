@@ -12,6 +12,7 @@ const toneClass: Record<HackTone, string> = {
 type Props = {
   name: string;
   code: string;
+  logoUrl?: string;
   lines: HackLine[];
   shown: number;
   running: boolean;
@@ -19,7 +20,16 @@ type Props = {
   preferred: boolean;
 };
 
-export default function BookmakerConsole({ name, code, lines, shown, running, progress, preferred }: Props) {
+export default function BookmakerConsole({
+  name,
+  code,
+  logoUrl = '',
+  lines,
+  shown,
+  running,
+  progress,
+  preferred,
+}: Props) {
   const viewRef = useRef<HTMLDivElement>(null);
   const printed = lines.slice(0, shown);
 
@@ -66,7 +76,7 @@ export default function BookmakerConsole({ name, code, lines, shown, running, pr
       <div className="p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
-            <BookmakerLogo name={name} domain={code} size="sm" />
+            <BookmakerLogo name={name} domain={code} logoUrl={logoUrl} size="sm" />
             <div className="min-w-0">
               <p className="truncate font-heading text-[13px] font-semibold text-foreground-950">
                 {name}

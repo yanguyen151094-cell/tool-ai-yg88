@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import BookmakerScanModal from './BookmakerScanModal';
 import BookmakerLogo from './BookmakerLogo';
-import { bookmakers } from '@/mocks/bookmakers';
-import type { Bookmaker } from '@/mocks/bookmakers';
+import { activeBookmakers, useBookmakers } from '@/lib/bookmakers';
+import type { Bookmaker } from '@/lib/bookmakers';
 
 type Props = {
   allowed: boolean;
@@ -10,19 +10,23 @@ type Props = {
 };
 
 export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
+  const { list, loading, error } = useBookmakers();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Bookmaker | null>(null);
 
+  const catalog = useMemo(() => activeBookmakers(list), [list]);
+
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (!keyword) return bookmakers;
-    return bookmakers.filter(
+    if (!keyword) return catalog;
+    return catalog.filter(
       (item) =>
         item.name.toLowerCase().includes(keyword) ||
         item.domain.toLowerCase().includes(keyword) ||
-        item.region.toLowerCase().includes(keyword),
+        item.region.toLowerCase().includes(keyword) ||
+        item.note.toLowerCase().includes(keyword),
     );
-  }, [query]);
+  }, [catalog, query]);
 
   if (!allowed) {
     return (
@@ -62,7 +66,7 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
             <span className="flex items-center gap-1.5 rounded border hairline bg-background-50/60 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap">
               <i className="ri-building-4-line text-primary-500" />
               <span className="text-foreground-600">nhà cái</span>
-              <span className="text-foreground-950">{bookmakers.length}</span>
+              <span className="text-foreground-950">{catalog.length}</span>
             </span>
             <span className="flex items-center gap-1.5 rounded border border-primary-500/30 bg-primary-500/10 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-primary-500">
               <i className="ri-shield-check-line" />
@@ -93,7 +97,19 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
         </p>
       </div>
 
-      {filtered.length === 0 ? (
+      {error && (
+        <div className="mt-3 flex items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2">
+          <i className="ri-error-warning-line text-[13px] text-accent-500" />
+          <p className="font-mono text-[11px] text-accent-500">{error}</p>
+        </div>
+      )}
+
+      {loading && list.length === 0 ? (
+        <div className="mt-8 flex items-center justify-center gap-2 rounded-lg border hairline bg-background-100/50 py-14 font-mono text-[12px] text-foreground-500">
+          <i className="ri-loader-4-line animate-spin" />
+          đang tải danh mục nhà cái...
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="mt-8 flex flex-col items-center justify-center rounded-lg border hairline bg-background-100/50 py-14">
           <i className="ri-search-eye-line text-2xl text-foreground-600" />
           <p className="mt-3 font-mono text-[12px] text-foreground-500">
@@ -124,7 +140,8 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
                 <BookmakerLogo
                   name={item.name}
                   domain={item.domain}
-                  featured={Boolean(item.featured)}
+                  logoUrl={item.logoUrl}
+                  featured={item.featured}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
@@ -165,8 +182,8 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
       <p className="mt-4 flex items-start gap-2 rounded-md border hairline bg-background-100/50 px-3 py-2.5 font-mono text-[10px] leading-relaxed text-foreground-600">
         <i className="ri-shield-keyhole-line mt-0.5 text-primary-500" />
         Nhà cái thường chỉ hiển thị trạng thái thu hút vốn và tỷ lệ thắng 0–20% mỗi phiên. Riêng
-        YG88 mở khoá chuyên nghiệp với loạt mã code và bảng nhập code — chỉ admin được cấp quyền mới
-        dùng được.
+        nhà cái được đánh dấu “ưu tiên” sẽ mở khoá chuyên nghiệp với loạt mã code và bảng nhập code —
+        chỉ admin được cấp quyền mới dùng được.
       </p>
 
       <BookmakerScanModal

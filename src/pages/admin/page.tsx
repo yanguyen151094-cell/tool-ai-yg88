@@ -10,8 +10,9 @@ import BaccaratPanel from './components/BaccaratPanel';
 import CreditPanel from './components/CreditPanel';
 import StaffPanel from './components/StaffPanel';
 import AgencyPanel from './components/AgencyPanel';
+import BookmakersPanel from './components/BookmakersPanel';
 
-type View = 'games' | 'users' | 'baccarat' | 'content' | 'credit' | 'staff' | 'agency';
+type View = 'games' | 'users' | 'baccarat' | 'content' | 'credit' | 'staff' | 'agency' | 'bookmakers';
 
 type MenuItem = {
   key: View;
@@ -50,6 +51,7 @@ const menu: MenuItem[] = [
     access: 'all',
   },
   { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ', access: 'owner' },
+  { key: 'bookmakers', label: 'Nhà cái & logo', icon: 'ri-building-4-line', hint: 'thêm nhà cái, thay logo', access: 'owner' },
   { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi', access: 'owner' },
   { key: 'staff', label: 'Phân quyền admin', icon: 'ri-shield-user-line', hint: 'admin & đại lý', access: 'owner' },
   { key: 'content', label: 'Nội dung web', icon: 'ri-file-text-line', hint: 'chữ & ảnh', access: 'owner' },
@@ -292,6 +294,7 @@ export default function AdminPage() {
 
           {currentView === 'credit' && <CreditPanel />}
           {currentView === 'games' && <GamesPanel />}
+          {currentView === 'bookmakers' && <BookmakersPanel />}
           {currentView === 'users' && <UsersPanel />}
           {currentView === 'agency' && <AgencyPanel />}
           {currentView === 'baccarat' && <BaccaratPanel />}

@@ -12,7 +12,7 @@ import ScanModal from './components/ScanModal';
 import CompareRow from './components/CompareRow';
 import GameDetailPanel from './components/GameDetailPanel';
 import { baccaratTables, buildProviderOptions, slotGames } from '@/lib/games';
-import { bookmakers } from '@/mocks/bookmakers';
+import { activeBookmakers, useBookmakers } from '@/lib/bookmakers';
 import { loadGames } from '@/lib/gamesRepo';
 import { useAuth } from '@/hooks/useAuth';
 import { spendCoins } from '@/lib/coins';
@@ -52,6 +52,8 @@ export default function GamesPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const { list: bookmakerList } = useBookmakers();
+  const bookmakerCount = useMemo(() => activeBookmakers(bookmakerList).length, [bookmakerList]);
 
   const displayName = profile?.username || authUser?.email || null;
 
@@ -293,7 +295,7 @@ export default function GamesPage() {
             onChange={(next) => setMode(next)}
             slotCount={slots.length}
             baccaratCount={tables.length}
-            casinoCount={bookmakers.length}
+            casinoCount={bookmakerCount}
             showCasino={canScanBookmakers || isAdmin}
             locked={!canScanBookmakers}
           />
@@ -397,7 +399,7 @@ export default function GamesPage() {
               ) : mode === 'baccarat' ? (
                 <>{`tls 1.3 · ${HACK_COST} coin / phiên`}</>
               ) : (
-                <>{`${bookmakers.length} nhà cái · mã hoá tls 1.3`}</>
+                <>{`${bookmakerCount} nhà cái · mã hoá tls 1.3`}</>
               )}
             </p>
           </div>
