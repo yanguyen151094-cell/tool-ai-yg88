@@ -26,6 +26,7 @@ type Body = {
   username?: string;
   password?: string;
   can_view?: boolean;
+  can_scan?: boolean;
   ref_code?: string;
 };
 
@@ -67,7 +68,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: me } = await db
     .from('admin_users')
-    .select('role, username, can_view_customers, ref_code')
+    .select('role, username, can_view_customers, can_scan_bookmakers, ref_code')
     .eq('user_id', caller.id)
     .maybeSingle();
   if (!me) return fail('Tai khoan nay khong co quyen quan tri.');
@@ -273,7 +274,7 @@ Deno.serve(async (req: Request) => {
   if (action === 'list_staff') {
     const { data, error } = await db
       .from('admin_users')
-      .select('user_id, username, can_view_customers, ref_code, created_at')
+      .select('user_id, username, can_view_customers, can_scan_bookmakers, ref_code, created_at')
       .eq('role', 'staff')
       .order('created_at', { ascending: false });
     if (error) return fail(error.message);
@@ -326,6 +327,7 @@ Deno.serve(async (req: Request) => {
       username,
       role: 'staff',
       can_view_customers: true,
+      can_scan_bookmakers: Boolean(body.can_scan),
       ref_code: refCode,
     });
     if (insertError) {
@@ -365,6 +367,16 @@ Deno.serve(async (req: Request) => {
       .eq('role', 'staff');
     if (error) return fail(error.message);
     return json({ ok: true });
+  }
+
+  if (action === 'set_scan_permission') {
+    const { error } = await db
+      .from('admin_users')
+      .update({ can_scan_bookmakers: Boolean(body.can_scan) })
+      .eq('user_id', String(body.user_id ?? ''))
+      .eq('role', 'staff');
+    if (error) return fail(error.message);
+    return json({ ok: true, can_scan_bookmakers: Boolean(body.can_scan) });
   }
 
   if (action === 'reset_password') {

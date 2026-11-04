@@ -20,6 +20,11 @@ mô hình, lịch sử phiên.
   mở phiên "bẻ khoá" với modal + trừ coin). Chế độ Baccarat **không hiển thị danh sách bàn**: khách nhập
   tài khoản game + tên nhà cái → bấm quét → **cửa sổ terminal bật lên dạng overlay giữa màn hình** (khóa
   cuộn trang, đóng bằng nút X hoặc Esc), chạy mã lệnh rồi hiện kết quả tỷ lệ thắng ngay trong cửa sổ đó.
+  Chế độ **Quét mã nhà cái** (chỉ admin được cấp quyền): danh mục tất cả nhà cái, bấm vào mở cửa sổ chạy
+  mã code chuyên nghiệp; nhà cái thường hiện trạng thái "đang thu hút vốn · không có mã code" với tỷ lệ
+  thắng 0–20% đổi mỗi phiên; riêng YG88 hiện loạt mã dạng OZQL1CHF (đổi/thêm ký tự mỗi phiên), bảng
+  nhập code chuyên nghiệp (8 · 18 · 38 · 68 · 88 · 188 · 288 · 588 · 1888 · 3888) và ô nhập tên tài khoản
+  + mã code để gửi tin nhắn chúc mừng.
 - `*` — Trang 404 phong cách terminal.
 
 ---
@@ -46,6 +51,10 @@ mô hình, lịch sử phiên.
       riêng (`/login?ref=ma`), khách đăng ký qua link nào thì gắn vào đại lý đó; admin chỉ thấy khách
       của mình, được cộng coin, xem thông tin liên hệ và cấp lại mật khẩu khách; chủ web thấy toàn bộ
       khách + biết khách thuộc đại lý nào
+- [x] Mục **Quét mã nhà cái** trên `/games`: danh mục nhà cái + cửa sổ terminal chạy mã code; nhà cái
+      thường báo "đang thu hút vốn, không có mã code" và tỷ lệ thắng 0–20% nhảy mỗi phiên; YG88 mở khoá
+      loạt mã chuyên nghiệp + nhập code + tin nhắn chúc mừng. Quyền dùng do chủ web bật riêng cho từng
+      admin (`admin_users.can_scan_bookmakers`), chặn cả ở menu lẫn khi mở cửa sổ
 
 ---
 
@@ -71,6 +80,14 @@ Khi kết nối Readdy Backend hoặc SaaS Supabase (Phase 2):
 | prediction | text | Tín hiệu trả về |
 | confidence | int | Độ khớp |
 | created_at | timestamptz | Thời điểm |
+
+### Table: admin_users
+| Field | Type | Description |
+|-------|------|-------------|
+| user_id | uuid | Khớp auth.users |
+| role | text | owner / staff |
+| ref_code | text | Mã link đại lý |
+| can_scan_bookmakers | boolean | Quyền dùng mục quét mã nhà cái |
 
 ### Table: coin_transactions
 | Field | Type | Description |

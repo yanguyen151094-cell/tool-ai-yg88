@@ -6,19 +6,22 @@ import AiStatusStrip from '@/components/feature/AiStatusStrip';
 import ModeSwitch from './components/ModeSwitch';
 import SlotCard from './components/SlotCard';
 import BaccaratHackPanel from './components/BaccaratHackPanel';
+import BookmakerPanel from './components/BookmakerPanel';
 import ScanModal from './components/ScanModal';
 import CompareRow from './components/CompareRow';
 import GameDetailPanel from './components/GameDetailPanel';
 import { baccaratTables, buildProviderOptions, slotGames } from '@/lib/games';
+import { bookmakers } from '@/mocks/bookmakers';
 import { loadGames } from '@/lib/gamesRepo';
 import { useAuth } from '@/hooks/useAuth';
 import { spendCoins } from '@/lib/coins';
 import type { BaccaratTable, SlotGame } from '@/mocks/games';
 
-type Mode = 'slot' | 'baccarat';
-type ScanTarget = { name: string; kind: Mode } | null;
+type Mode = 'slot' | 'baccarat' | 'casino';
+type HackKind = 'slot' | 'baccarat';
+type ScanTarget = { name: string; kind: HackKind } | null;
 type DetailState = {
-  kind: Mode;
+  kind: HackKind;
   name: string;
   code: string;
   image: string;
@@ -37,7 +40,7 @@ export default function GamesPage() {
   const [query, setQuery] = useState('');
   const [scanTarget, setScanTarget] = useState<ScanTarget>(null);
   const [detail, setDetail] = useState<DetailState>(null);
-  const { user: authUser, profile, signOut, refresh } = useAuth();
+  const { user: authUser, profile, signOut, refresh, canScanBookmakers, isAdmin, adminRole } = useAuth();
   const [coins, setCoins] = useState(0);
   const [slots, setSlots] = useState<SlotGame[]>([]);
   const [tables, setTables] = useState<BaccaratTable[]>([]);
@@ -92,6 +95,10 @@ export default function GamesPage() {
     setVisible(PAGE_SIZE);
   }, [mode, provider, query]);
 
+  useEffect(() => {
+    if (mode === 'casino' && !isAdmin) setMode('slot');
+  }, [mode, isAdmin]);
+
   const providerOptions = useMemo(() => buildProviderOptions(slots), [slots]);
 
   const filteredSlots = useMemo(() => {
@@ -116,7 +123,7 @@ export default function GamesPage() {
     window.setTimeout(() => navigate('/login'), 900);
   };
 
-  const handleScan = (name: string, kind: Mode) => {
+  const handleScan = (name: string, kind: HackKind) => {
     if (!authUser) {
       requireLogin();
       return;
@@ -211,6 +218,24 @@ export default function GamesPage() {
                 <div className="flex items-center gap-2 rounded-md border border-primary-500/30 bg-primary-500/10 px-3 py-2 font-mono text-[11px]">
                   <i className="ri-user-line text-primary-500" />
                   <span className="max-w-[120px] truncate text-primary-500">{displayName}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[9px] tracking-[0.1em] uppercase ${
+                      isAdmin
+                        ? 'bg-primary-500/20 text-primary-500'
+                        : 'bg-background-300/40 text-foreground-500'
+                    }`}
+                  >
+                    {adminRole === 'owner' ? 'chủ web' : isAdmin ? 'admin' : 'khách chơi'}
+                  </span>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-1 whitespace-nowrap text-foreground-400 transition-colors hover:text-primary-500"
+                    >
+                      <i className="ri-shield-keyhole-line" />
+                      quản trị
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -257,6 +282,9 @@ export default function GamesPage() {
             onChange={(next) => setMode(next)}
             slotCount={slots.length}
             baccaratCount={tables.length}
+            casinoCount={bookmakers.length}
+            showCasino={canScanBookmakers || isAdmin}
+            locked={!canScanBookmakers}
           />
 
           <div
@@ -345,14 +373,20 @@ export default function GamesPage() {
 
           <div className="mt-4 flex items-center justify-between border-b hairline pb-2">
             <p className="font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">
-              {mode === 'slot' ? 'phòng nổ hũ / slot' : 'baccarat trực tiếp / phiên bẻ khoá'}
+              {mode === 'slot'
+                ? 'phòng nổ hũ / slot'
+                : mode === 'baccarat'
+                  ? 'baccarat trực tiếp / phiên bẻ khoá'
+                  : 'danh mục nhà cái / quét mã code'}
             </p>
             <p className="flex items-center gap-1.5 font-mono text-[10px] whitespace-nowrap text-foreground-600">
               <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-primary-500" />
               {mode === 'slot' ? (
                 <>{`tỷ lệ & cược cập nhật mỗi 3 phút · ${total} kết quả`}</>
-              ) : (
+              ) : mode === 'baccarat' ? (
                 <>{`tls 1.3 · ${HACK_COST} coin / phiên`}</>
+              ) : (
+                <>{`${bookmakers.length} nhà cái · mã hoá tls 1.3`}</>
               )}
             </p>
           </div>
@@ -404,7 +438,7 @@ export default function GamesPage() {
                 </button>
               </div>
             )
-          ) : (
+          ) : mode === 'baccarat' ? (
             <BaccaratHackPanel
               coins={coins}
               cost={HACK_COST}
@@ -418,6 +452,8 @@ export default function GamesPage() {
                 setNotice(message);
               }}
             />
+          ) : (
+            <BookmakerPanel allowed={canScanBookmakers} canUseCodes={canScanBookmakers} />
           )}
 
           <div className="mt-8 flex flex-col gap-3 rounded-lg border border-primary-500/20 bg-background-100/50 p-4 md:flex-row md:items-center md:justify-between md:p-5">

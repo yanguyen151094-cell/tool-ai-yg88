@@ -4,6 +4,7 @@ export type StaffRow = {
   user_id: string;
   username: string | null;
   can_view_customers: boolean;
+  can_scan_bookmakers: boolean;
   ref_code: string | null;
   created_at: string;
   customer_count: number;
@@ -81,6 +82,13 @@ export const updateRefCode = (userId: string, refCode: string) =>
 
 export const resetStaffPassword = (userId: string, password: string) =>
   callAdminStaff({ action: 'reset_password', user_id: userId, password });
+
+export const setScanPermission = (userId: string, allowed: boolean) =>
+  callAdminStaff<{ can_scan_bookmakers: boolean }>({
+    action: 'set_scan_permission',
+    user_id: userId,
+    can_scan: allowed,
+  });
 
 export const removeStaff = (userId: string) =>
   callAdminStaff({ action: 'remove_staff', user_id: userId });

@@ -5,6 +5,7 @@ import {
   listStaff,
   removeStaff,
   resetStaffPassword,
+  setScanPermission,
   updateRefCode,
 } from '@/lib/adminStaff';
 import type { StaffRow } from '@/lib/adminStaff';
@@ -112,7 +113,8 @@ export default function StaffPanel() {
         Mỗi admin cấp dưới có quyền <strong className="text-foreground-300">cộng điểm</strong>,{' '}
         <strong className="text-foreground-300">xem thông tin khách</strong> và{' '}
         <strong className="text-foreground-300">cấp lại mật khẩu</strong>. Họ có một link đăng ký
-        riêng và chỉ thấy khách đăng ký qua link đó.
+        riêng và chỉ thấy khách đăng ký qua link đó. Quyền <strong className="text-foreground-300">quét mã nhà cái</strong>{' '}
+        phải được chủ web bật riêng cho từng admin.
       </p>
 
       {notice && (
@@ -168,7 +170,7 @@ export default function StaffPanel() {
             </div>
             <p className="flex items-start gap-2 rounded-md border hairline bg-background-50/60 px-3 py-2 font-mono text-[10px] leading-relaxed text-foreground-500">
               <i className="ri-shield-check-line mt-0.5 text-[12px] text-primary-500" />
-              quyền cố định: cộng điểm, xem khách của mình, cấp lại mật khẩu khách.
+              quyền cố định: cộng điểm, xem khách của mình, cấp lại mật khẩu khách. Quyền quét mã nhà cái bật riêng sau khi tạo.
             </p>
             <button
               type="submit"
@@ -216,10 +218,18 @@ export default function StaffPanel() {
                         {formatNumber(row.total_credited)} coin đã cộng
                       </p>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1.5 rounded border border-primary-500/30 bg-primary-500/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-primary-500 uppercase">
-                      <i className="ri-shield-user-line text-[11px]" />
-                      admin đại lý
-                    </span>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      {row.can_scan_bookmakers && (
+                        <span className="flex items-center gap-1 rounded border border-accent-500/40 bg-accent-500/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-accent-500 uppercase">
+                          <i className="ri-scan-2-line text-[11px]" />
+                          quét mã
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1.5 rounded border border-primary-500/30 bg-primary-500/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-primary-500 uppercase">
+                        <i className="ri-shield-user-line text-[11px]" />
+                        admin đại lý
+                      </span>
+                    </div>
                   </div>
 
                   {row.ref_code ? (
@@ -246,6 +256,23 @@ export default function StaffPanel() {
                   )}
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        run(async () => {
+                          await setScanPermission(row.user_id, !row.can_scan_bookmakers);
+                        }, `Đã ${row.can_scan_bookmakers ? 'tắt' : 'bật'} quyền quét mã nhà cái cho ${row.username}.`)
+                      }
+                      className={`flex cursor-pointer items-center gap-1 rounded border px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap transition-colors disabled:opacity-60 ${
+                        row.can_scan_bookmakers
+                          ? 'border-accent-500/40 text-accent-500 hover:bg-accent-500/10'
+                          : 'hairline text-foreground-400 hover:text-primary-500'
+                      }`}
+                    >
+                      <i className={row.can_scan_bookmakers ? 'ri-lock-line' : 'ri-scan-2-line'} />
+                      {row.can_scan_bookmakers ? 'tắt quét mã' : 'bật quét mã'}
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
