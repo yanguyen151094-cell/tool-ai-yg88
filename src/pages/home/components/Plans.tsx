@@ -1,7 +1,12 @@
-import { Link } from 'react-router-dom';
 import { coinTiers } from '@/mocks/plans';
+import DepositAction from '@/components/base/DepositAction';
+import { useAuth } from '@/hooks/useAuth';
+import { useDepositUrl } from '@/lib/deposit';
 
 export default function Plans() {
+  const { user } = useAuth();
+  const { url: depositUrl } = useDepositUrl(user?.id ?? null);
+
   const grid = coinTiers.filter((tier) => !tier.wide);
   const wide = coinTiers.find((tier) => tier.wide);
 
@@ -58,13 +63,13 @@ export default function Plans() {
                 <span className="font-mono text-[10px] tracking-[0.1em] text-foreground-600 uppercase">
                   ≈ {tier.xu} phiên phân tích
                 </span>
-                <Link
-                  to="/login"
+                <DepositAction
+                  url={depositUrl}
                   className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-accent-500/45 px-3.5 py-2 font-mono text-[12px] font-semibold whitespace-nowrap text-accent-500 transition-colors hover:bg-accent-500 hover:text-background-50"
                 >
                   Nạp ngay
                   <i className="ri-arrow-right-line" />
-                </Link>
+                </DepositAction>
               </div>
             </article>
           ))}
@@ -105,13 +110,13 @@ export default function Plans() {
                   <span className="font-mono text-[10px] tracking-[0.1em] whitespace-nowrap text-foreground-600 uppercase">
                     ≈ {wide.xu} phiên phân tích
                   </span>
-                  <Link
-                    to="/login"
+                  <DepositAction
+                    url={depositUrl}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent-500 px-5 py-2.5 font-mono text-[12px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-accent-400"
                   >
                     Nạp gói này
                     <i className="ri-arrow-right-line" />
-                  </Link>
+                  </DepositAction>
                 </div>
               </div>
             </article>

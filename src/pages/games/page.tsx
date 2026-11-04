@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
+import DepositAction from '@/components/base/DepositAction';
+import { useDepositUrl } from '@/lib/deposit';
 import Footer from '@/components/feature/Footer';
 import AiStatusStrip from '@/components/feature/AiStatusStrip';
 import ChangePasswordModal from '@/components/feature/ChangePasswordModal';
@@ -53,6 +55,7 @@ export default function GamesPage() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const { list: bookmakerList } = useBookmakers();
+  const { url: depositUrl } = useDepositUrl(authUser?.id ?? null);
   const bookmakerCount = useMemo(() => activeBookmakers(bookmakerList).length, [bookmakerList]);
 
   const displayName = profile?.username || authUser?.email || null;
@@ -477,13 +480,13 @@ export default function GamesPage() {
                 quả và không đảm bảo lợi nhuận. Hãy chơi có trách nhiệm, chỉ dành cho người từ 18+.
               </p>
             </div>
-            <Link
-              to="/#pricing"
+            <DepositAction
+              url={depositUrl}
               className="flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary-500 px-4 py-2 font-mono text-[11px] font-semibold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400"
             >
               <i className="ri-copper-coin-line" />
               Nạp coin
-            </Link>
+            </DepositAction>
           </div>
         </div>
       </main>

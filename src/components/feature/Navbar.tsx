@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { DEPOSIT_FALLBACK_PATH, useDepositUrl } from '@/lib/deposit';
 
 const navLinks = [
   { href: '/', label: 'Trang chủ' },
@@ -16,6 +17,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, isAdmin, signOut } = useAuth();
+  const { url: depositUrl } = useDepositUrl(user?.id ?? null);
 
   const displayName = profile?.username || user?.email || null;
   const coins = Number(profile?.coins ?? 0);
@@ -91,7 +93,29 @@ export default function Navbar() {
           </span>
 
           {displayName ? (
-            <div className="relative hidden sm:block">
+            <>
+              {depositUrl ? (
+                <a
+                  href={depositUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden cursor-pointer items-center gap-1.5 rounded-md bg-accent-500 px-3 py-1.5 font-mono text-[12px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-accent-400 sm:flex"
+                >
+                  <i className="ri-wallet-3-line text-[14px]" />
+                  Nạp tiền nhận coin
+                  <i className="ri-arrow-right-up-line text-[12px]" />
+                </a>
+              ) : (
+                <Link
+                  to={DEPOSIT_FALLBACK_PATH}
+                  className="hidden cursor-pointer items-center gap-1.5 rounded-md bg-accent-500 px-3 py-1.5 font-mono text-[12px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-accent-400 sm:flex"
+                >
+                  <i className="ri-wallet-3-line text-[14px]" />
+                  Nạp tiền nhận coin
+                </Link>
+              )}
+
+              <div className="relative hidden sm:block">
               <button
                 type="button"
                 onClick={() => setAccountOpen((prev) => !prev)}
@@ -142,6 +166,26 @@ export default function Navbar() {
                       danh sách game
                     </Link>
 
+                    {depositUrl ? (
+                      <a
+                        href={depositUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-md px-3 py-2 font-mono text-[11px] text-accent-500 transition-colors hover:bg-accent-500/10"
+                      >
+                        <i className="ri-wallet-3-line text-[13px]" />
+                        nạp tiền nhận coin
+                      </a>
+                    ) : (
+                      <Link
+                        to={DEPOSIT_FALLBACK_PATH}
+                        className="flex items-center gap-2 rounded-md px-3 py-2 font-mono text-[11px] text-accent-500 transition-colors hover:bg-accent-500/10"
+                      >
+                        <i className="ri-wallet-3-line text-[13px]" />
+                        nạp tiền nhận coin
+                      </Link>
+                    )}
+
                     {isAdmin && (
                       <Link
                         to="/admin"
@@ -164,6 +208,7 @@ export default function Navbar() {
                 </>
               )}
             </div>
+            </>
           ) : (
             <Link
               to="/login"
@@ -217,7 +262,29 @@ export default function Navbar() {
                 </span>
               </div>
 
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex flex-col gap-2">
+                {depositUrl ? (
+                  <a
+                    href={depositUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-md bg-accent-500 px-4 py-2.5 font-mono text-[12px] font-bold whitespace-nowrap text-background-50"
+                  >
+                    <i className="ri-wallet-3-line" />
+                    nạp tiền nhận coin
+                  </a>
+                ) : (
+                  <Link
+                    to={DEPOSIT_FALLBACK_PATH}
+                    className="flex items-center justify-center gap-2 rounded-md bg-accent-500 px-4 py-2.5 font-mono text-[12px] font-bold whitespace-nowrap text-background-50"
+                  >
+                    <i className="ri-wallet-3-line" />
+                    nạp tiền nhận coin
+                  </Link>
+                )}
+              </div>
+
+              <div className="mt-2 flex items-center gap-2">
                 {isAdmin && (
                   <Link
                     to="/admin"

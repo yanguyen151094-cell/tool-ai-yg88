@@ -6,6 +6,7 @@ export type StaffRow = {
   can_view_customers: boolean;
   can_scan_bookmakers: boolean;
   ref_code: string | null;
+  deposit_url?: string | null;
   created_at: string;
   customer_count: number;
   total_credited: number;
@@ -27,6 +28,7 @@ export type AgencyInfo = {
   ref_code: string | null;
   customer_count: number;
   total_credited: number;
+  deposit_url?: string | null;
 };
 
 export type CreditCustomer = { id: string; username: string | null };

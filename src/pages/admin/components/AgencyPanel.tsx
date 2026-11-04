@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { buildRefLink, listStaff, myAgency } from '@/lib/adminStaff';
 import type { AgencyInfo, StaffRow } from '@/lib/adminStaff';
+import DepositLinkEditor from './DepositLinkEditor';
+import { saveMyDepositUrl, saveStaffDepositUrl } from '@/lib/deposit';
 
 const formatNumber = (value: number) => Number(value ?? 0).toLocaleString('vi-VN');
 
@@ -10,6 +12,8 @@ export default function AgencyPanel() {
   const isOwner = adminRole === 'owner';
 
   const [agency, setAgency] = useState<AgencyInfo | null>(null);
+  const [ownDeposit, setOwnDeposit] = useState('');
+  const [depositRow, setDepositRow] = useState<string | null>(null);
   const [agents, setAgents] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -20,8 +24,9 @@ export default function AgencyPanel() {
     setError('');
     try {
       if (isOwner) {
-        const result = await listStaff();
+        const [result, own] = await Promise.all([listStaff(), myAgency()]);
         setAgents(result.items ?? []);
+        setOwnDeposit(String(own.agency?.deposit_url ?? ''));
       } else {
         const result = await myAgency();
         setAgency(result.agency ?? null);
@@ -129,6 +134,17 @@ export default function AgencyPanel() {
             </div>
           </div>
 
+          <DepositLinkEditor
+            title="link nạp tiền mặc định (của bạn)"
+            description="Dùng cho khách không thuộc đại lý nào. Khách thuộc đại lý khác sẽ đi theo link của đại lý đó."
+            value={ownDeposit}
+            onSave={async (url) => {
+              const saved = await saveMyDepositUrl(url);
+              setOwnDeposit(saved);
+              return saved;
+            }}
+          />
+
           {agents.length === 0 ? (
             <div className="mt-4 flex flex-col items-center justify-center rounded-lg border hairline bg-background-100/50 py-16">
               <i className="ri-links-line text-2xl text-foreground-600" />
@@ -186,6 +202,46 @@ export default function AgencyPanel() {
                       chưa có mã đại lý — cấp mã ở mục "Phân quyền admin".
                     </p>
                   )}
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDepositRow(depositRow === agent.user_id ? null : agent.user_id)
+                      }
+                      className={`flex cursor-pointer items-center gap-1 rounded border px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap transition-colors ${
+                        agent.deposit_url
+                          ? 'border-accent-500/40 text-accent-500 hover:bg-accent-500/10'
+                          : 'hairline text-foreground-400 hover:text-primary-500'
+                      }`}
+                    >
+                      <i className="ri-wallet-3-line" />
+                      {agent.deposit_url ? 'sửa link nạp' : 'đặt link nạp'}
+                    </button>
+                    {agent.deposit_url && (
+                      <span className="max-w-[420px] truncate font-mono text-[9px] text-foreground-600">
+                        {agent.deposit_url}
+                      </span>
+                    )}
+                  </div>
+
+                  {depositRow === agent.user_id && (
+                    <DepositLinkEditor
+                      compact
+                      title={`link nạp tiền của ${agent.username || 'đại lý'}`}
+                      description="Khách đăng ký qua link đại lý này bấm nút nạp sẽ đi tới địa chỉ dưới đây."
+                      value={String(agent.deposit_url ?? '')}
+                      onSave={async (url) => {
+                        const saved = await saveStaffDepositUrl(agent.user_id, url);
+                        setAgents((prev) =>
+                          prev.map((item) =>
+                            item.user_id === agent.user_id ? { ...item, deposit_url: saved } : item,
+                          ),
+                        );
+                        return saved;
+                      }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -223,6 +279,17 @@ export default function AgencyPanel() {
                     {agency.ref_code}
                   </p>
                 </div>
+
+                <DepositLinkEditor
+                  title="link nạp tiền của đại lý"
+                  description="Khách đăng ký qua link của bạn, bấm “Nạp tiền nhận coin” sẽ được đưa tới địa chỉ này."
+                  value={String(agency?.deposit_url ?? '')}
+                  onSave={async (url) => {
+                    const saved = await saveMyDepositUrl(url);
+                    setAgency((prev) => (prev ? { ...prev, deposit_url: saved } : prev));
+                    return saved;
+                  }}
+                />
               </>
             ) : (
               <p className="mt-3 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2 font-mono text-[11px] text-accent-500">

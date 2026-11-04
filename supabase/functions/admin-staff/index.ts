@@ -28,6 +28,7 @@ type Body = {
   can_view?: boolean;
   can_scan?: boolean;
   ref_code?: string;
+  deposit_url?: string;
 };
 
 /** Sinh ma dai ly tu ten dang nhap: chi chu thuong, so va gach ngang. */
@@ -66,9 +67,61 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  let body: Body;
+  try {
+    body = await req.json();
+  } catch {
+    return fail('Du lieu gui len khong hop le.');
+  }
+
+  const action = body.action;
+
+  /** Chuan hoa link nap: chi nhan http/https, rong = xoa link. */
+  const cleanUrl = (raw: unknown) => {
+    const value = String(raw ?? '').trim().slice(0, 500);
+    if (!value) return '';
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  };
+
+  /** Khach dang nhap lay link nap tien cua dai ly minh (hoac mac dinh chu web). */
+  if (action === 'resolve_deposit') {
+    let url = '';
+    const { data: prof } = await db
+      .from('profiles')
+      .select('agent_id')
+      .eq('id', caller.id)
+      .maybeSingle();
+    const agentId = prof?.agent_id ? String(prof.agent_id) : '';
+    if (agentId) {
+      const { data: agent } = await db
+        .from('admin_users')
+        .select('deposit_url')
+        .eq('user_id', agentId)
+        .maybeSingle();
+      url = String(agent?.deposit_url ?? '').trim();
+    }
+    if (!url) {
+      const { data: ownerRow } = await db
+        .from('admin_users')
+        .select('deposit_url')
+        .eq('role', 'owner')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      url = String(ownerRow?.deposit_url ?? '').trim();
+    }
+    return json({ ok: true, url });
+  }
+
   const { data: me } = await db
     .from('admin_users')
-    .select('role, username, can_view_customers, can_scan_bookmakers, ref_code')
+    .select('role, username, can_view_customers, can_scan_bookmakers, ref_code, deposit_url')
     .eq('user_id', caller.id)
     .maybeSingle();
   if (!me) return fail('Tai khoan nay khong co quyen quan tri.');
@@ -100,15 +153,6 @@ Deno.serve(async (req: Request) => {
       return { ok: false, message: 'Khong goi duoc dich vu dang nhap de xac minh.' };
     }
   };
-
-  let body: Body;
-  try {
-    body = await req.json();
-  } catch {
-    return fail('Du lieu gui len khong hop le.');
-  }
-
-  const action = body.action;
 
   /** Kiem tra khach co thuoc quyen quan ly cua nguoi goi hay khong. */
   const loadAllowedCustomer = async (targetId: string) => {
@@ -241,6 +285,17 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, items: data ?? [] });
   }
 
+  if (action === 'set_deposit_link') {
+    const url = cleanUrl(body.deposit_url);
+    if (url === null) return fail('Link nap phai bat dau bang http:// hoac https://.');
+    const { error } = await db
+      .from('admin_users')
+      .update({ deposit_url: url })
+      .eq('user_id', caller.id);
+    if (error) return fail(error.message);
+    return json({ ok: true, deposit_url: url });
+  }
+
   if (action === 'my_agency') {
     const [{ count: customerCount }, { data: credits }] = await Promise.all([
       db.from('profiles').select('id', { count: 'exact', head: true }).eq('agent_id', caller.id),
@@ -259,6 +314,7 @@ Deno.serve(async (req: Request) => {
         ref_code: me.ref_code ?? null,
         customer_count: customerCount ?? 0,
         total_credited: totalCredited,
+        deposit_url: me.deposit_url ?? '',
       },
     });
   }
@@ -305,10 +361,32 @@ Deno.serve(async (req: Request) => {
       }),
     );
 
+  if (action === 'set_staff_deposit') {
+    const targetId = String(body.user_id ?? '');
+    if (!targetId) return fail('Thieu admin can dat link nap.');
+    const url = cleanUrl(body.deposit_url);
+    if (url === null) return fail('Link nap phai bat dau bang http:// hoac https://.');
+    const { data: target } = await db
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', targetId)
+      .in('role', ['staff', 'owner'])
+      .maybeSingle();
+    if (!target) return fail('Khong tim thay admin can dat link nap.');
+    const { error } = await db
+      .from('admin_users')
+      .update({ deposit_url: url })
+      .eq('user_id', targetId);
+    if (error) return fail(error.message);
+    return json({ ok: true, deposit_url: url });
+  }
+
   if (action === 'list_staff') {
     const { data, error } = await db
       .from('admin_users')
-      .select('user_id, username, can_view_customers, can_scan_bookmakers, ref_code, created_at')
+      .select(
+        'user_id, username, can_view_customers, can_scan_bookmakers, ref_code, deposit_url, created_at',
+      )
       .eq('role', 'staff')
       .order('created_at', { ascending: false });
     if (error) return fail(error.message);

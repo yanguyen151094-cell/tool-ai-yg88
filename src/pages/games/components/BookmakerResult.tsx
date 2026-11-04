@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import CodeClaimModal from './CodeClaimModal';
 import BookmakerLogo from './BookmakerLogo';
-import { formatVnd } from './bookmakerScript';
+import AccountCheck from './AccountCheck';
+import { formatVnd, foundedYear } from './bookmakerScript';
+import { useLiveWinRate } from '@/hooks/useLiveWinRate';
 import type { VaultCode } from './bookmakerScript';
 import type { Bookmaker } from '@/lib/bookmakers';
 
@@ -26,6 +28,8 @@ export default function BookmakerResult({
 }: Props) {
   const [copied, setCopied] = useState('');
   const [claimOpen, setClaimOpen] = useState(false);
+  const liveRate = useLiveWinRate(winRate);
+  const year = foundedYear(bookmaker.name, bookmaker.domain);
 
   const copyCode = async (value: string) => {
     try {
@@ -76,6 +80,8 @@ export default function BookmakerResult({
         </div>
       </div>
 
+      <AccountCheck bookmaker={bookmaker} winRate={liveRate} />
+
       {!preferred && (
         <>
           <div className="rounded-md border border-accent-500/30 bg-accent-500/5 p-3.5">
@@ -88,9 +94,15 @@ export default function BookmakerResult({
                 không có mã code
               </span>
             </div>
-            <p className="mt-2.5 text-sm leading-relaxed text-foreground-300">
-              {bookmaker.name} hiện đang thu hút vốn, hệ thống không tìm thấy bảng mã code nào để
-              trích xuất. Tỷ lệ thắng sẽ nhảy liên tục trong khoảng 0% – 20% sau mỗi phiên quét.
+            <p className="mt-3 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2.5 font-heading text-[13px] leading-relaxed font-bold text-accent-500 uppercase md:text-[14px]">
+              nhà cái này hoạt động từ năm {year}, đang trong quá trình thu hồi vốn từ người chơi,
+              tỷ lệ thắng ở nhà cái này hiện đang là{' '}
+              <span className="font-heading text-[19px] tabular-nums md:text-[22px]">
+                {liveRate}%
+              </span>
+            </p>
+            <p className="mt-2 font-mono text-[9px] leading-relaxed text-foreground-600">
+              con số % nhảy liên tục trong khoảng 0% – 20% sau mỗi phiên quét.
             </p>
           </div>
 
@@ -101,7 +113,7 @@ export default function BookmakerResult({
                   tỷ lệ thắng phiên này
                 </p>
                 <p className="mt-1 flex items-baseline gap-1 font-heading text-3xl font-bold text-primary-500 tabular-nums">
-                  {winRate}
+                  {liveRate}
                   <span className="text-sm font-semibold text-foreground-500">%</span>
                 </p>
               </div>
@@ -112,7 +124,7 @@ export default function BookmakerResult({
             <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-background-300/50">
               <div
                 className="h-full rounded-full bg-accent-500 transition-all duration-500"
-                style={{ width: `${Math.max(2, (winRate / 20) * 100)}%` }}
+                style={{ width: `${Math.max(2, (liveRate / 20) * 100)}%` }}
               />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -133,8 +145,8 @@ export default function BookmakerResult({
               ))}
             </div>
             <p className="mt-2.5 font-mono text-[9px] leading-relaxed text-foreground-600">
-              bấm “quét lại phiên mới” để bốc lại một tỷ lệ khác — con số thay đổi mỗi lần quét và
-              luôn nằm dưới 20%.
+              con số tự nhảy liên tục trong khoảng 0% – 20% và bấm “quét lại phiên mới” để đổi dữ
+              liệu quét.
             </p>
           </div>
         </>

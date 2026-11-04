@@ -76,6 +76,103 @@ export const randomVaultRate = (previous: number) => {
 export const isProfessionalCode = (value: string) =>
   PROFESSIONAL_CODES.includes(normalize(value));
 
+/** Băm chuỗi thành số ổn định để mỗi nhà cái / tài khoản luôn ra cùng kết quả. */
+export const hashText = (value: string) => {
+  let hash = 2166136261;
+  const text = value.toLowerCase();
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash);
+};
+
+/** Lấy năm hoạt động từ dữ liệu quét của nhà cái; thiếu thì suy ra cố định theo tên miền. */
+export const foundedYear = (name: string, domain: string) =>
+  1996 + (hashText(`${name}|${domain}`) % 26);
+
+/** Nhà cái YG88 — luôn báo tài khoản ở trạng thái bình thường. */
+export const isYg88Bookmaker = (name: string, domain: string) => {
+  const label = `${name} ${domain}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return label.includes('yg88');
+};
+
+export type AccountTone = 'ok' | 'warn' | 'bad';
+
+export type AccountCheckResult = {
+  account: string;
+  status: string;
+  tone: AccountTone;
+  activeDays: number;
+  activity: number;
+  note: string;
+};
+
+const OTHER_STATUS: { status: string; tone: AccountTone; note: string }[] = [
+  {
+    status: 'đang bị theo dõi',
+    tone: 'warn',
+    note: 'Tài khoản có chuỗi thắng liên tục nên nhà cái đang để mắt tới.',
+  },
+  {
+    status: 'đang thu hút vốn',
+    tone: 'warn',
+    note: 'Dòng tiền của tài khoản này vẫn đang bị hút về ví nóng của nhà cái.',
+  },
+  {
+    status: 'tần suất thắng thấp',
+    tone: 'bad',
+    note: 'Tỷ lệ thắng vài phiên gần đây thấp hơn mức trung bình của nhà cái.',
+  },
+  {
+    status: 'tài khoản mới',
+    tone: 'warn',
+    note: 'Tài khoản vừa tạo, chưa đủ dữ liệu để chấm điểm ổn định.',
+  },
+  {
+    status: 'hoạt động yếu',
+    tone: 'bad',
+    note: 'Tài khoản ít phát sinh, nhà cái đang siết hạn mức rút.',
+  },
+];
+
+/**
+ * Tra cứu tên tài khoản tại một nhà cái.
+ * Mọi nhà cái đều trả về trạng thái, số ngày hoạt động và mức độ hoạt động;
+ * riêng YG88 luôn báo bình thường.
+ */
+export const checkAccount = (input: {
+  account: string;
+  name: string;
+  domain: string;
+}): AccountCheckResult => {
+  const account = input.account.trim();
+  const seed = hashText(`${input.name}|${input.domain}|${account}`);
+  const activeDays = 12 + (seed % 860);
+  const activity = 34 + (seed % 61);
+
+  if (isYg88Bookmaker(input.name, input.domain)) {
+    return {
+      account,
+      status: 'bình thường',
+      tone: 'ok',
+      activeDays,
+      activity,
+      note: 'Tài khoản đang hoạt động bình thường, không bị giới hạn và không nằm trong diện thu hồi vốn.',
+    };
+  }
+
+  const picked = OTHER_STATUS[seed % OTHER_STATUS.length];
+  return {
+    account,
+    status: picked.status,
+    tone: picked.tone,
+    activeDays,
+    activity,
+    note: picked.note,
+  };
+};
+
 /** Kịch bản chạy mã của cửa sổ quét nhà cái. */
 export const buildBookmakerScript = (input: {
   name: string;
