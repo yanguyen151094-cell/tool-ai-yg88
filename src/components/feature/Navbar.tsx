@@ -50,15 +50,15 @@ export default function Navbar() {
       }`}
     >
       <div className="mx-auto flex h-16 w-full items-center justify-between gap-4 px-4 md:h-[72px] md:px-6 lg:px-10">
-        <Link to="/" className="flex shrink-0 items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md border border-primary-500/50 bg-primary-500/10 font-heading text-base font-bold text-primary-500 md:h-10 md:w-10">
+        <Link to="/" className="flex min-w-0 shrink items-center gap-2 md:gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary-500/50 bg-primary-500/10 font-heading text-base font-bold text-primary-500 md:h-10 md:w-10">
             Y
           </span>
-          <span className="flex flex-col leading-none">
-            <span className="font-heading text-sm font-bold tracking-[0.16em] text-foreground-950 md:text-base">
+          <span className="flex min-w-0 flex-col leading-none">
+            <span className="truncate font-heading text-[13px] font-bold tracking-[0.1em] text-foreground-950 sm:text-sm md:text-base md:tracking-[0.16em]">
               TOOL AI YG88
             </span>
-            <span className="mt-1 font-mono text-[9px] tracking-[0.2em] text-foreground-600 uppercase">
+            <span className="mt-1 hidden font-mono text-[9px] tracking-[0.2em] text-foreground-600 uppercase sm:block">
               ai predict console
             </span>
           </span>
@@ -94,6 +94,26 @@ export default function Navbar() {
 
           {displayName ? (
             <>
+              {depositUrl ? (
+                <a
+                  href={depositUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-9 cursor-pointer items-center gap-1 rounded-md bg-accent-500 px-2.5 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-accent-400 sm:hidden"
+                >
+                  <i className="ri-wallet-3-line text-[14px]" />
+                  Nạp tiền
+                </a>
+              ) : (
+                <Link
+                  to={DEPOSIT_FALLBACK_PATH}
+                  className="flex h-9 cursor-pointer items-center gap-1 rounded-md bg-accent-500 px-2.5 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-accent-400 sm:hidden"
+                >
+                  <i className="ri-wallet-3-line text-[14px]" />
+                  Nạp tiền
+                </Link>
+              )}
+
               {depositUrl ? (
                 <a
                   href={depositUrl}
