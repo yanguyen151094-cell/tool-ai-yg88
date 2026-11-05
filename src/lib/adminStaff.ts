@@ -5,6 +5,7 @@ export type StaffRow = {
   username: string | null;
   can_view_customers: boolean;
   can_scan_bookmakers: boolean;
+  can_manage_deposits: boolean;
   ref_code: string | null;
   deposit_url?: string | null;
   created_at: string;
@@ -90,6 +91,13 @@ export const setScanPermission = (userId: string, allowed: boolean) =>
     action: 'set_scan_permission',
     user_id: userId,
     can_scan: allowed,
+  });
+
+export const setDepositPermission = (userId: string, allowed: boolean) =>
+  callAdminStaff<{ can_manage_deposits: boolean }>({
+    action: 'set_deposit_permission',
+    user_id: userId,
+    can_deposit: allowed,
   });
 
 export const removeStaff = (userId: string) =>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import HackTerminal from './HackTerminal';
+import CodeStreamBox from './CodeStreamBox';
 import type { HackLine } from './HackTerminal';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
@@ -193,6 +194,17 @@ export default function BaccaratSessionModal({
                 * Kết quả thực tế mỗi ván là ngẫu nhiên. Chỉ số trên là thống kê từ dữ liệu quá khứ,
                 không đảm bảo thắng. Chơi có trách nhiệm, 18+.
               </p>
+            </div>
+          )}
+
+          {showResult && (
+            <div className="mt-3">
+              <CodeStreamBox
+                name={casino || 'baccarat'}
+                domain={room.trim() ? `${room.trim()}-bcr` : `${casino || 'bcr'}.live`}
+                compact
+                variant="baccarat"
+              />
             </div>
           )}
 

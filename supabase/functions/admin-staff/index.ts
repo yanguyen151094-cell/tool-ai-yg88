@@ -27,6 +27,7 @@ type Body = {
   password?: string;
   can_view?: boolean;
   can_scan?: boolean;
+  can_deposit?: boolean;
   ref_code?: string;
   deposit_url?: string;
 };
@@ -385,7 +386,7 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await db
       .from('admin_users')
       .select(
-        'user_id, username, can_view_customers, can_scan_bookmakers, ref_code, deposit_url, created_at',
+        'user_id, username, can_view_customers, can_scan_bookmakers, can_manage_deposits, ref_code, deposit_url, created_at',
       )
       .eq('role', 'staff')
       .order('created_at', { ascending: false });
@@ -489,6 +490,16 @@ Deno.serve(async (req: Request) => {
       .eq('role', 'staff');
     if (error) return fail(error.message);
     return json({ ok: true, can_scan_bookmakers: Boolean(body.can_scan) });
+  }
+
+  if (action === 'set_deposit_permission') {
+    const { error } = await db
+      .from('admin_users')
+      .update({ can_manage_deposits: Boolean(body.can_deposit) })
+      .eq('user_id', String(body.user_id ?? ''))
+      .eq('role', 'staff');
+    if (error) return fail(error.message);
+    return json({ ok: true, can_manage_deposits: Boolean(body.can_deposit) });
   }
 
   if (action === 'reset_password') {

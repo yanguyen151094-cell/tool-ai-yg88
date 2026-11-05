@@ -24,6 +24,7 @@ export function useAuth() {
   const [adminRole, setAdminRole] = useState<'owner' | 'staff' | null>(null);
   const [canViewCustomers, setCanViewCustomers] = useState(false);
   const [canScanBookmakers, setCanScanBookmakers] = useState(false);
+  const [canManageDeposits, setCanManageDeposits] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
@@ -65,7 +66,7 @@ export function useAuth() {
 
         const { data: adminRow, error: adminError } = await supabase
           .from('admin_users')
-          .select('user_id, role, can_view_customers, can_scan_bookmakers')
+          .select('user_id, role, can_view_customers, can_scan_bookmakers, can_manage_deposits')
           .eq('user_id', userId)
           .maybeSingle();
         if (adminError) throw adminError;
@@ -75,6 +76,7 @@ export function useAuth() {
         setAdminRole(role);
         setCanViewCustomers(role === 'owner' || Boolean(adminRow?.can_view_customers));
         setCanScanBookmakers(role === 'owner' || Boolean(adminRow?.can_scan_bookmakers));
+        setCanManageDeposits(role === 'owner' || Boolean(adminRow?.can_manage_deposits));
       } catch (caught) {
         setError(messageOf(caught, 'Không tải được hồ sơ người chơi.'));
       } finally {
@@ -120,6 +122,7 @@ export function useAuth() {
       setAdminRole(null);
       setCanViewCustomers(false);
       setCanScanBookmakers(false);
+      setCanManageDeposits(false);
       setAccessChecked(false);
       return;
     }
@@ -360,6 +363,7 @@ export function useAuth() {
     setAdminRole(null);
     setCanViewCustomers(false);
     setCanScanBookmakers(false);
+    setCanManageDeposits(false);
   }, []);
 
   return {
@@ -370,6 +374,7 @@ export function useAuth() {
     adminRole,
     canViewCustomers,
     canScanBookmakers,
+    canManageDeposits,
     loading,
     profileLoading,
     accessChecked,

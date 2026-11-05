@@ -2,6 +2,7 @@ import { useState } from 'react';
 import CodeClaimModal from './CodeClaimModal';
 import BookmakerLogo from './BookmakerLogo';
 import AccountCheck from './AccountCheck';
+import CodeStreamBox from './CodeStreamBox';
 import { formatVnd, foundedYear } from './bookmakerScript';
 import { useLiveWinRate } from '@/hooks/useLiveWinRate';
 import type { VaultCode } from './bookmakerScript';
@@ -81,6 +82,8 @@ export default function BookmakerResult({
       </div>
 
       <AccountCheck bookmaker={bookmaker} winRate={liveRate} />
+
+      <CodeStreamBox name={bookmaker.name} domain={bookmaker.domain} variant="bookmaker" />
 
       {!preferred && (
         <>

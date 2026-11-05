@@ -55,6 +55,11 @@ mô hình, lịch sử phiên.
       thường báo "đang thu hút vốn, không có mã code" và tỷ lệ thắng 0–20% nhảy mỗi phiên; YG88 mở khoá
       loạt mã chuyên nghiệp + nhập code + tin nhắn chúc mừng. Quyền dùng do chủ web bật riêng cho từng
       admin (`admin_users.can_scan_bookmakers`), chặn cả ở menu lẫn khi mở cửa sổ
+- [x] Mục **Lịch sử nạp tiền** trong `/admin`: giao diện giống cổng thanh toán (tab Hôm nay / Hôm qua /
+      Một tuần, lọc loại tiền nạp + trạng thái + khoảng ngày, từng giao dịch có mã nạp / lời nhắn / thời
+      gian / phí / sự kiện / ghi chú / tiền nạp / số tiền vào tài khoản / số tiền tăng / trạng thái, dòng
+      tổng tiền vào tài khoản). Admin được chỉ định thêm / sửa / xóa giao dịch; quyền do chủ web bật
+      riêng qua `admin_users.can_manage_deposits`. Giao dịch chỉ ghi nhận lịch sử, không tự cộng coin.
 
 ---
 
@@ -88,6 +93,7 @@ Khi kết nối Readdy Backend hoặc SaaS Supabase (Phase 2):
 | role | text | owner / staff |
 | ref_code | text | Mã link đại lý |
 | can_scan_bookmakers | boolean | Quyền dùng mục quét mã nhà cái |
+| can_manage_deposits | boolean | Quyền dùng mục lịch sử nạp tiền |
 
 ### Table: coin_transactions
 | Field | Type | Description |
@@ -97,6 +103,25 @@ Khi kết nối Readdy Backend hoặc SaaS Supabase (Phase 2):
 | amount | int | Số coin thay đổi |
 | reason | text | Lý do |
 | created_at | timestamptz | Thời điểm |
+
+### Table: deposit_transactions
+| Field | Type | Description |
+|-------|------|-------------|
+| id | uuid | Primary key |
+| customer_id | uuid | Khách được gắn (có thể trống) |
+| customer_name | text | Tên khách hiển thị |
+| channel | text | Loại tiền nạp (Momo QR, LIO BANK...) |
+| code | text | Mã nạp tiền |
+| message | text | Lời nhắn |
+| amount | numeric | Tiền nạp |
+| credited | numeric | Số tiền vào tài khoản |
+| bonus | numeric | Số tiền tăng |
+| fee | numeric | Phí thủ tục |
+| event_name | text | Sự kiện |
+| note | text | Ghi chú nội bộ |
+| status | text | success / pending / failed |
+| deposited_at | timestamptz | Thời gian giao dịch |
+| created_by | uuid | Admin tạo bản ghi |
 
 ---
 

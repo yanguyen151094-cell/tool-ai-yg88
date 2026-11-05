@@ -5,6 +5,7 @@ import TermWindow from '@/components/base/TermWindow';
 import WinTicker from '@/components/feature/WinTicker';
 import { winners } from '@/mocks/winners';
 import { useAuth } from '@/hooks/useAuth';
+import CodeStreamBox from '@/pages/games/components/CodeStreamBox';
 import { supabase } from '@/lib/supabase';
 import { isValidPhone, isValidUsername, normalizeTelegram } from '@/lib/phone';
 
@@ -160,6 +161,15 @@ export default function LoginPage() {
               Đăng nhập để xem bảng phân tích Baccarat, Nổ hũ và Slot theo thời gian thực. Dữ liệu
               tham khảo, quyết định thuộc về bạn.
             </p>
+
+            <div className="mt-6">
+              <CodeStreamBox
+                name={mode === 'login' ? 'phiên đăng nhập' : 'phiên đăng ký'}
+                domain="yg88"
+                variant="auth"
+                compact
+              />
+            </div>
 
             <div className="mt-7 rounded-md border hairline bg-background-100/70 p-3">
               <p className="mb-2 font-mono text-[10px] tracking-[0.16em] text-foreground-600 uppercase">

@@ -290,3 +290,96 @@ div[id*="netlify"][style*="position: fixed"] {
     transform: rotate(var(--angle)) translateY(calc(var(--distance) * -1.35)) scale(0.55);
   }
 }
+
+/* ---- khung sáng: dùng cho cửa sổ nổi "Lịch sử nạp tiền" ---- */
+
+.light-scope {
+  color-scheme: light;
+
+  --background-50: 1 0 0;
+  --background-100: 0.982 0.003 200;
+  --background-200: 0.958 0.005 200;
+  --background-300: 0.918 0.007 200;
+  --background-400: 0.86 0.008 200;
+  --background-500: 0.78 0.008 200;
+  --background-600: 0.7 0.008 200;
+  --background-700: 0.62 0.008 200;
+  --background-800: 0.52 0.008 200;
+  --background-900: 0.42 0.008 200;
+  --background-950: 0.32 0.008 200;
+
+  --foreground-50: 0.975 0.004 200;
+  --foreground-100: 0.94 0.005 200;
+  --foreground-200: 0.865 0.006 200;
+  --foreground-300: 0.74 0.007 200;
+  --foreground-400: 0.62 0.008 200;
+  --foreground-500: 0.545 0.009 200;
+  --foreground-600: 0.47 0.01 200;
+  --foreground-700: 0.4 0.011 200;
+  --foreground-800: 0.33 0.012 200;
+  --foreground-900: 0.265 0.013 200;
+  --foreground-950: 0.2 0.014 200;
+
+  --primary-50: 0.972 0.03 158;
+  --primary-100: 0.94 0.055 158;
+  --primary-200: 0.878 0.09 158;
+  --primary-300: 0.785 0.125 158;
+  --primary-400: 0.665 0.152 158;
+  --primary-500: 0.55 0.155 158;
+  --primary-600: 0.485 0.142 158;
+  --primary-700: 0.415 0.12 158;
+  --primary-800: 0.345 0.095 158;
+  --primary-900: 0.28 0.07 158;
+  --primary-950: 0.21 0.05 158;
+
+  --accent-50: 0.98 0.022 75;
+  --accent-100: 0.95 0.055 75;
+  --accent-200: 0.9 0.095 75;
+  --accent-300: 0.83 0.125 75;
+  --accent-400: 0.75 0.145 75;
+  --accent-500: 0.66 0.15 75;
+  --accent-600: 0.6 0.14 75;
+  --accent-700: 0.52 0.125 75;
+  --accent-800: 0.44 0.105 75;
+  --accent-900: 0.36 0.08 75;
+  --accent-950: 0.27 0.06 75;
+
+  --secondary-50: 0.97 0.015 135;
+  --secondary-100: 0.935 0.03 135;
+  --secondary-200: 0.875 0.045 135;
+  --secondary-300: 0.78 0.06 135;
+  --secondary-400: 0.66 0.065 135;
+  --secondary-500: 0.55 0.065 135;
+  --secondary-600: 0.48 0.06 135;
+  --secondary-700: 0.41 0.05 135;
+  --secondary-800: 0.34 0.04 135;
+  --secondary-900: 0.28 0.03 135;
+  --secondary-950: 0.21 0.02 135;
+}
+
+.light-scope .hairline {
+  border-color: oklch(var(--foreground-950) / 0.1);
+}
+
+.light-scope ::-webkit-scrollbar-track {
+  background: oklch(var(--background-100));
+}
+
+.light-scope ::-webkit-scrollbar-thumb {
+  background: oklch(var(--background-400));
+}
+
+@keyframes deposit-window-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.deposit-window-in {
+  animation: deposit-window-in 0.22s ease-out;
+}

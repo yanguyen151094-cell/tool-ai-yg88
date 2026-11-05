@@ -10,6 +10,7 @@ import GamePreview from './components/GamePreview';
 import Plans from './components/Plans';
 import Faq from './components/Faq';
 import CtaSection from './components/CtaSection';
+import LiveCodePanel from './components/LiveCodePanel';
 
 export default function HomePage() {
   const location = useLocation();
@@ -39,6 +40,7 @@ export default function HomePage() {
         <CtaSection />
       </main>
       <Footer />
+      <LiveCodePanel />
     </div>
   );
 }

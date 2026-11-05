@@ -6,6 +6,7 @@ import {
   listStaff,
   removeStaff,
   resetStaffPassword,
+  setDepositPermission,
   setScanPermission,
   suggestPassword,
   updateRefCode,
@@ -118,7 +119,9 @@ export default function StaffPanel() {
         <strong className="text-foreground-300">xem thông tin khách</strong> và{' '}
         <strong className="text-foreground-300">cấp lại mật khẩu</strong>. Họ có một link đăng ký
         riêng và chỉ thấy khách đăng ký qua link đó. Quyền <strong className="text-foreground-300">quét mã nhà cái</strong>{' '}
-        phải được chủ web bật riêng cho từng admin.
+        phải được chủ web bật riêng cho từng admin. Quyền{" "}
+        <strong className="text-foreground-300">quản lý lịch sử nạp tiền</strong> cũng bật riêng
+        theo từng admin — chỉ ai được bật mới thấy mục “Lịch sử nạp tiền” trong khu quản trị.
       </p>
 
       {notice && (
@@ -229,6 +232,12 @@ export default function StaffPanel() {
                           quét mã
                         </span>
                       )}
+                      {row.can_manage_deposits && (
+                        <span className="flex items-center gap-1 rounded border border-secondary-500/40 bg-secondary-500/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-secondary-500 uppercase">
+                          <i className="ri-history-line text-[11px]" />
+                          lịch sử nạp
+                        </span>
+                      )}
                       <span className="flex items-center gap-1.5 rounded border border-primary-500/30 bg-primary-500/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-primary-500 uppercase">
                         <i className="ri-shield-user-line text-[11px]" />
                         admin đại lý
@@ -276,6 +285,23 @@ export default function StaffPanel() {
                     >
                       <i className={row.can_scan_bookmakers ? 'ri-lock-line' : 'ri-scan-2-line'} />
                       {row.can_scan_bookmakers ? 'tắt quét mã' : 'bật quét mã'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        run(async () => {
+                          await setDepositPermission(row.user_id, !row.can_manage_deposits);
+                        }, `Đã ${row.can_manage_deposits ? 'tắt' : 'bật'} quyền quản lý lịch sử nạp tiền cho ${row.username}.`)
+                      }
+                      className={`flex cursor-pointer items-center gap-1 rounded border px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap transition-colors disabled:opacity-60 ${
+                        row.can_manage_deposits
+                          ? 'border-secondary-500/40 text-secondary-500 hover:bg-secondary-500/10'
+                          : 'hairline text-foreground-400 hover:text-secondary-500'
+                      }`}
+                    >
+                      <i className={row.can_manage_deposits ? 'ri-lock-line' : 'ri-history-line'} />
+                      {row.can_manage_deposits ? 'tắt lịch sử nạp' : 'bật lịch sử nạp'}
                     </button>
                     <button
                       type="button"

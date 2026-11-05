@@ -1,4 +1,5 @@
 import { formatBetLevel } from '@/lib/betting';
+import CodeStreamBox from './CodeStreamBox';
 import type { SlotRoundPrediction } from './slotHackScript';
 
 type Props = {
@@ -57,6 +58,8 @@ export default function SlotHackResult({
           </div>
         ))}
       </div>
+
+      <CodeStreamBox name={gameName} domain={code || 'slot-room'} variant="slot" />
 
       <div className="rounded-md border hairline bg-background-100/60 px-3 py-2.5">
         <div className="flex items-center justify-between gap-2 font-mono text-[9px] tracking-[0.1em] text-foreground-600 uppercase">

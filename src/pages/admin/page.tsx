@@ -11,8 +11,18 @@ import CreditPanel from './components/CreditPanel';
 import StaffPanel from './components/StaffPanel';
 import AgencyPanel from './components/AgencyPanel';
 import BookmakersPanel from './components/BookmakersPanel';
+import DepositHistoryWindow from './components/DepositHistoryWindow';
 
-type View = 'games' | 'users' | 'baccarat' | 'content' | 'credit' | 'staff' | 'agency' | 'bookmakers';
+type View =
+  | 'games'
+  | 'users'
+  | 'baccarat'
+  | 'content'
+  | 'credit'
+  | 'staff'
+  | 'agency'
+  | 'bookmakers'
+  | 'deposits';
 
 type MenuItem = {
   key: View;
@@ -21,7 +31,7 @@ type MenuItem = {
   icon: string;
   hint: string;
   staffHint?: string;
-  access: 'owner' | 'all';
+  access: 'owner' | 'all' | 'deposit';
 };
 
 const menu: MenuItem[] = [
@@ -50,6 +60,13 @@ const menu: MenuItem[] = [
     staffHint: 'link đăng ký của tôi',
     access: 'all',
   },
+  {
+    key: 'deposits',
+    label: 'Lịch sử nạp tiền',
+    icon: 'ri-history-line',
+    hint: 'xem & sửa giao dịch nạp',
+    access: 'deposit',
+  },
   { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ', access: 'owner' },
   { key: 'bookmakers', label: 'Nhà cái & logo', icon: 'ri-building-4-line', hint: 'thêm nhà cái, thay logo', access: 'owner' },
   { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi', access: 'owner' },
@@ -58,10 +75,20 @@ const menu: MenuItem[] = [
 ];
 
 export default function AdminPage() {
-  const { user, profile, isAdmin, adminRole, loading, accessChecked, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    isAdmin,
+    adminRole,
+    canManageDeposits,
+    loading,
+    accessChecked,
+    signOut,
+  } = useAuth();
   const [view, setView] = useState<View>('games');
   const [menuOpen, setMenuOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
 
   if (loading) {
     return (
@@ -125,7 +152,11 @@ export default function AdminPage() {
 
   const isOwner = adminRole === 'owner';
   const visibleMenu = menu
-    .filter((item) => item.access === 'all' || isOwner)
+    .filter((item) => {
+      if (item.access === 'all') return true;
+      if (item.access === 'owner') return isOwner;
+      return canManageDeposits;
+    })
     .map((item) => ({
       ...item,
       label: isOwner ? item.label : item.staffLabel || item.label,
@@ -217,6 +248,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => {
                     setView(item.key);
+                    if (item.key === 'deposits') setDepositOpen(true);
                     setMenuOpen(false);
                   }}
                   className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left font-mono text-[12px] transition-colors ${
@@ -245,7 +277,10 @@ export default function AdminPage() {
                 <button
                   key={item.key}
                   type="button"
-                  onClick={() => setView(item.key)}
+                  onClick={() => {
+                    setView(item.key);
+                    if (item.key === 'deposits') setDepositOpen(true);
+                  }}
                   className={`flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2.5 text-left transition-colors ${
                     currentView === item.key
                       ? 'bg-primary-500/15 text-primary-500'
@@ -295,6 +330,27 @@ export default function AdminPage() {
           {currentView === 'credit' && <CreditPanel />}
           {currentView === 'games' && <GamesPanel />}
           {currentView === 'bookmakers' && <BookmakersPanel />}
+          {currentView === 'deposits' && (
+            <div className="flex flex-col items-center rounded-lg border hairline bg-background-100/60 px-6 py-16 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-primary-500/40 bg-primary-500/10 text-primary-500">
+                <i className="ri-history-line text-xl" />
+              </span>
+              <h2 className="mt-4 font-heading text-lg font-bold text-foreground-950">
+                Lịch sử nạp tiền
+              </h2>
+              <p className="mt-1 max-w-sm text-sm text-foreground-500">
+                Xem, thêm, sửa, xóa giao dịch nạp trong một cửa sổ riêng.
+              </p>
+              <button
+                type="button"
+                onClick={() => setDepositOpen(true)}
+                className="mt-5 flex cursor-pointer items-center gap-2 rounded-md bg-primary-500 px-5 py-2.5 font-mono text-[12px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400"
+              >
+                <i className="ri-window-line" />
+                mở cửa sổ lịch sử nạp
+              </button>
+            </div>
+          )}
           {currentView === 'users' && <UsersPanel />}
           {currentView === 'agency' && <AgencyPanel />}
           {currentView === 'baccarat' && <BaccaratPanel />}
@@ -302,6 +358,11 @@ export default function AdminPage() {
           {currentView === 'content' && <ContentPanel />}
         </main>
       </div>
+
+      <DepositHistoryWindow
+        open={depositOpen && currentView === 'deposits'}
+        onClose={() => setDepositOpen(false)}
+      />
 
       <ChangePasswordModal
         open={passwordOpen}
