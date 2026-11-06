@@ -102,10 +102,6 @@ export default function GamesPage() {
     setVisible(PAGE_SIZE);
   }, [mode, provider, query]);
 
-  useEffect(() => {
-    if (mode === 'casino' && !isAdmin) setMode('slot');
-  }, [mode, isAdmin]);
-
   const providerOptions = useMemo(() => buildProviderOptions(slots), [slots]);
 
   const filteredSlots = useMemo(() => {
@@ -299,8 +295,8 @@ export default function GamesPage() {
             slotCount={slots.length}
             baccaratCount={tables.length}
             casinoCount={bookmakerCount}
-            showCasino={canScanBookmakers || isAdmin}
-            locked={!canScanBookmakers}
+            showCasino
+            locked={!authUser}
           />
 
           <div
@@ -469,7 +465,7 @@ export default function GamesPage() {
               }}
             />
           ) : (
-            <BookmakerPanel allowed={canScanBookmakers} canUseCodes={canScanBookmakers} />
+            <BookmakerPanel allowed={Boolean(authUser)} canUseCodes={canScanBookmakers} />
           )}
 
           <div className="mt-8 flex flex-col gap-3 rounded-lg border border-primary-500/20 bg-background-100/50 p-4 md:flex-row md:items-center md:justify-between md:p-5">

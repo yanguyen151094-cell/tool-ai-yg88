@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import BookmakerScanModal from './BookmakerScanModal';
 import BookmakerLogo from './BookmakerLogo';
 import { activeBookmakers, useBookmakers } from '@/lib/bookmakers';
@@ -35,12 +36,19 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
           <i className="ri-lock-2-line text-lg text-accent-500" />
         </span>
         <p className="mt-3 font-heading text-[15px] font-bold text-foreground-950">
-          Mục quét mã nhà cái đang khoá
+          Đăng nhập để xem tỷ lệ thắng nhà cái
         </p>
         <p className="mt-1.5 max-w-md font-mono text-[11px] leading-relaxed text-foreground-500">
-          Chức năng này chỉ dành cho tài khoản admin được chủ web cấp quyền. Liên hệ chủ web để được
-          bật quyền “quét mã nhà cái”.
+          Tài khoản người chơi xem được danh mục nhà cái, tỷ lệ thắng từng phiên và luồng quét dữ
+          liệu. Đăng nhập để mở mục này.
         </p>
+        <Link
+          to="/login"
+          className="mt-4 flex items-center gap-2 rounded-md bg-primary-500 px-4 py-2 font-mono text-[11px] font-bold whitespace-nowrap text-background-50 transition-colors hover:bg-primary-400"
+        >
+          <i className="ri-login-box-line" />
+          Đăng nhập
+        </Link>
       </div>
     );
   }
@@ -58,8 +66,8 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
               Quét mã code nhà cái
             </h2>
             <p className="mt-1 max-w-2xl font-mono text-[10px] leading-relaxed text-foreground-500">
-              Danh mục tất cả nhà cái đang theo dõi. Bấm vào một nhà cái để mở cửa sổ chạy mã code
-              chuyên nghiệp và xem kết quả sau khi quét xong.
+              Danh mục tất cả nhà cái đang theo dõi. Bấm vào một nhà cái để mở cửa sổ chạy mã quét
+              và xem tỷ lệ thắng của phiên đó.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -69,8 +77,8 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
               <span className="text-foreground-950">{catalog.length}</span>
             </span>
             <span className="flex items-center gap-1.5 rounded border border-primary-500/30 bg-primary-500/10 px-2.5 py-1.5 font-mono text-[10px] whitespace-nowrap text-primary-500">
-              <i className="ri-shield-check-line" />
-              quyền admin đã bật
+              <i className={canUseCodes ? 'ri-shield-check-line' : 'ri-eye-line'} />
+              {canUseCodes ? 'quyền admin đã bật' : 'chế độ người chơi'}
             </span>
           </div>
         </div>
@@ -171,7 +179,7 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
                 </span>
                 <span className="flex shrink-0 items-center gap-1 rounded border border-primary-500/40 px-2 py-1 font-mono text-[9px] whitespace-nowrap text-primary-500 transition-colors group-hover:bg-primary-500 group-hover:text-background-50">
                   <i className="ri-play-line" />
-                  chạy mã
+                  {canUseCodes ? 'chạy mã' : 'xem tỷ lệ'}
                 </span>
               </div>
             </button>
@@ -181,9 +189,9 @@ export default function BookmakerPanel({ allowed, canUseCodes }: Props) {
 
       <p className="mt-4 flex items-start gap-2 rounded-md border hairline bg-background-100/50 px-3 py-2.5 font-mono text-[10px] leading-relaxed text-foreground-600">
         <i className="ri-shield-keyhole-line mt-0.5 text-primary-500" />
-        Nhà cái thường chỉ hiển thị trạng thái thu hút vốn và tỷ lệ thắng 0–20% mỗi phiên. Riêng
-        nhà cái được đánh dấu “ưu tiên” sẽ mở khoá chuyên nghiệp với loạt mã code và bảng nhập code —
-        chỉ admin được cấp quyền mới dùng được.
+        {canUseCodes
+          ? 'Nhà cái thường chỉ hiển thị trạng thái thu hút vốn và tỷ lệ thắng 0–20% mỗi phiên. Riêng nhà cái được đánh dấu “ưu tiên” sẽ mở khoá chuyên nghiệp với loạt mã code và bảng nhập code — chỉ admin được cấp quyền mới dùng được.'
+          : 'Tài khoản người chơi xem được tỷ lệ thắng và luồng mã chạy lệnh của từng nhà cái. Bảng khoá mã code và ô nhập code được ẩn — chỉ admin được cấp quyền mới thấy.'}
       </p>
 
       <BookmakerScanModal

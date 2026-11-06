@@ -4,6 +4,7 @@ import BookmakerResult from './BookmakerResult';
 import {
   buildBookmakerScript,
   buildVaultSession,
+  randomPreferredRate,
   randomVaultRate,
 } from './bookmakerScript';
 import type { VaultCode } from './bookmakerScript';
@@ -25,10 +26,14 @@ type Props = {
   onClose: () => void;
 };
 
-const createSession = (preferred: boolean, previousRate = -1): Session => ({
+const createSession = (
+  preferred: boolean,
+  includeCodes: boolean,
+  previousRate = -1,
+): Session => ({
   preferred,
-  winRate: preferred ? 88 : randomVaultRate(previousRate),
-  vault: preferred ? buildVaultSession() : [],
+  winRate: preferred ? randomPreferredRate(previousRate) : randomVaultRate(previousRate),
+  vault: preferred && includeCodes ? buildVaultSession() : [],
 });
 
 export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClose }: Props) {
@@ -39,10 +44,10 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
 
   useEffect(() => {
     if (!open || !bookmaker) return;
-    setSession(createSession(Boolean(bookmaker.featured)));
+    setSession(createSession(Boolean(bookmaker.featured), canUseCodes));
     setShown(0);
     setPhase('running');
-  }, [open, bookmaker?.id, bookmaker?.featured]);
+  }, [open, bookmaker?.id, bookmaker?.featured, canUseCodes]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -64,9 +69,10 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
             preferred: session.preferred,
             winRate: session.winRate,
             licenseCodes: session.vault.map((item) => item.serial),
+            includeCodes: canUseCodes,
           })
         : [],
-    [bookmaker, session],
+    [bookmaker, session, canUseCodes],
   );
 
   useEffect(() => {
@@ -82,12 +88,10 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
 
   const rescan = useCallback(() => {
     if (!bookmaker) return;
-    setSession((prev) =>
-      createSession(Boolean(bookmaker.featured), prev.preferred ? -1 : prev.winRate),
-    );
+    setSession((prev) => createSession(Boolean(bookmaker.featured), canUseCodes, prev.winRate));
     setShown(0);
     setPhase('running');
-  }, [bookmaker]);
+  }, [bookmaker, canUseCodes]);
 
   if (!open || !bookmaker) return null;
 
@@ -110,9 +114,11 @@ export default function BookmakerScanModal({ open, bookmaker, canUseCodes, onClo
             </p>
             <p className="mt-0.5 truncate font-mono text-[9px] text-foreground-600">
               {phase === 'running'
-                ? 'đang quét mã code nhà cái'
+                ? 'đang quét dữ liệu nhà cái'
                 : session.preferred
-                  ? 'kết quả · khoá chuyên nghiệp đã giải'
+                  ? canUseCodes
+                    ? 'kết quả · khoá chuyên nghiệp đã giải'
+                    : 'kết quả · tỷ lệ thắng đã cập nhật'
                   : 'kết quả · nhà cái đang thu hút vốn'}
             </p>
           </div>

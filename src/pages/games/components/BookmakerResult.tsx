@@ -29,7 +29,7 @@ export default function BookmakerResult({
 }: Props) {
   const [copied, setCopied] = useState('');
   const [claimOpen, setClaimOpen] = useState(false);
-  const liveRate = useLiveWinRate(winRate);
+  const liveRate = useLiveWinRate(winRate, preferred ? 100 : 20, 1100, preferred ? 80 : 0);
   const year = foundedYear(bookmaker.name, bookmaker.domain);
 
   const copyCode = async (value: string) => {
@@ -86,80 +86,109 @@ export default function BookmakerResult({
       <CodeStreamBox name={bookmaker.name} domain={bookmaker.domain} variant="bookmaker" />
 
       {!preferred && (
-        <>
-          <div className="rounded-md border border-accent-500/30 bg-accent-500/5 p-3.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/15 px-2.5 py-1 font-mono text-[9px] tracking-[0.14em] text-accent-500 uppercase">
-                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent-500" />
-                đang thu hút vốn
-              </span>
-              <span className="rounded-full border hairline bg-background-50/70 px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-foreground-500 uppercase">
-                không có mã code
-              </span>
-            </div>
-            <p className="mt-3 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2.5 font-heading text-[13px] leading-relaxed font-bold text-accent-500 uppercase md:text-[14px]">
-              nhà cái này hoạt động từ năm {year}, đang trong quá trình thu hồi vốn từ người chơi,
-              tỷ lệ thắng ở nhà cái này hiện đang là{' '}
-              <span className="font-heading text-[19px] tabular-nums md:text-[22px]">
-                {liveRate}%
-              </span>
-            </p>
-            <p className="mt-2 font-mono text-[9px] leading-relaxed text-foreground-600">
-              con số % nhảy liên tục trong khoảng 0% – 20% sau mỗi phiên quét.
-            </p>
+        <div className="rounded-md border border-accent-500/30 bg-accent-500/5 p-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/15 px-2.5 py-1 font-mono text-[9px] tracking-[0.14em] text-accent-500 uppercase">
+              <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent-500" />
+              đang thu hút vốn
+            </span>
+            <span className="rounded-full border hairline bg-background-50/70 px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-foreground-500 uppercase">
+              không có mã code
+            </span>
           </div>
-
-          <div className="rounded-md border hairline bg-background-50/60 p-3.5">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.16em] text-foreground-600 uppercase">
-                  tỷ lệ thắng phiên này
-                </p>
-                <p className="mt-1 flex items-baseline gap-1 font-heading text-3xl font-bold text-primary-500 tabular-nums">
-                  {liveRate}
-                  <span className="text-sm font-semibold text-foreground-500">%</span>
-                </p>
-              </div>
-              <p className="font-mono text-[10px] text-foreground-600">
-                khung dao động: <span className="text-foreground-300">0% – 20%</span>
-              </p>
-            </div>
-            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-background-300/50">
-              <div
-                className="h-full rounded-full bg-accent-500 transition-all duration-500"
-                style={{ width: `${Math.max(2, (liveRate / 20) * 100)}%` }}
-              />
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { label: 'dòng tiền vào', value: bookmaker.volume },
-                { label: 'ví nóng', value: '4' },
-                { label: 'độ lệch', value: '1.8%' },
-                { label: 'mã code', value: '0' },
-              ].map((item) => (
-                <div key={item.label} className="rounded border hairline bg-background-100/60 px-2 py-1.5">
-                  <p className="truncate font-mono text-[8px] tracking-[0.12em] text-foreground-600 uppercase">
-                    {item.label}
-                  </p>
-                  <p className="mt-0.5 truncate font-mono text-[11px] font-semibold text-foreground-950 tabular-nums">
-                    {item.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2.5 font-mono text-[9px] leading-relaxed text-foreground-600">
-              con số tự nhảy liên tục trong khoảng 0% – 20% và bấm “quét lại phiên mới” để đổi dữ
-              liệu quét.
-            </p>
-          </div>
-        </>
+          <p className="mt-3 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2.5 font-heading text-[13px] leading-relaxed font-bold text-accent-500 uppercase md:text-[14px]">
+            nhà cái này hoạt động từ năm {year}, đang trong quá trình thu hồi vốn từ người chơi, tỷ
+            lệ thắng ở nhà cái này hiện đang là{' '}
+            <span className="font-heading text-[19px] tabular-nums md:text-[22px]">{liveRate}%</span>
+          </p>
+          <p className="mt-2 font-mono text-[9px] leading-relaxed text-foreground-600">
+            khung giao động 0% – 100%, nhưng con số % chỉ nhảy trong khoảng 0% – 20% sau mỗi
+            phiên quét.
+          </p>
+        </div>
       )}
 
+      <div className="rounded-md border hairline bg-background-50/60 p-3.5">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="font-mono text-[9px] tracking-[0.16em] text-foreground-600 uppercase">
+              tỷ lệ thắng phiên này
+            </p>
+            <p className="mt-1 flex items-baseline gap-1 font-heading text-3xl font-bold text-primary-500 tabular-nums">
+              {liveRate}
+              <span className="text-sm font-semibold text-foreground-500">%</span>
+            </p>
+          </div>
+          <p className="font-mono text-[10px] text-foreground-600">
+            {preferred ? (
+              <>
+                nhà cái ưu tiên:{' '}
+                <span className="text-foreground-300">khung 80% – 100%</span>
+              </>
+            ) : (
+              <>
+                khung 0% – 100% · số nhảy{' '}
+                <span className="text-foreground-300">0% – 20%</span>
+              </>
+            )}
+          </p>
+        </div>
+        <div className="relative mt-2.5 h-2 w-full overflow-hidden rounded-full bg-background-300/50">
+          <div
+            className="h-full rounded-full bg-accent-500 transition-all duration-500"
+            style={{ width: `${Math.min(100, Math.max(0, liveRate))}%` }}
+          />
+          <span
+            className="absolute inset-y-0 w-px bg-foreground-950/25"
+            style={{ left: preferred ? '80%' : '20%' }}
+          />
+        </div>
+        <div className="relative mt-1 h-3 font-mono text-[8px] text-foreground-600 tabular-nums">
+          {preferred ? (
+            <>
+              <span className="absolute left-0 leading-none">0%</span>
+              <span className="absolute left-[80%] leading-none">80%</span>
+              <span className="absolute right-0 leading-none">100%</span>
+            </>
+          ) : (
+            <>
+              <span className="absolute left-0 leading-none">0%</span>
+              <span className="absolute left-1/5 leading-none">20%</span>
+              <span className="absolute right-0 leading-none">100%</span>
+            </>
+          )}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: 'dòng tiền vào', value: bookmaker.volume },
+            { label: 'ví nóng', value: '4' },
+            { label: 'độ lệch', value: '1.8%' },
+            { label: 'mã code', value: canUseCodes ? String(vault.length) : 'ẩn' },
+          ].map((item) => (
+            <div key={item.label} className="rounded border hairline bg-background-100/60 px-2 py-1.5">
+              <p className="truncate font-mono text-[8px] tracking-[0.12em] text-foreground-600 uppercase">
+                {item.label}
+              </p>
+              <p className="mt-0.5 truncate font-mono text-[11px] font-semibold text-foreground-950 tabular-nums">
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2.5 font-mono text-[9px] leading-relaxed text-foreground-600">
+          {preferred
+            ? 'tỷ lệ thắng của YG88 luôn nhảy trong khoảng 80% – 100%. Bấm “quét lại phiên mới” để đổi dữ liệu quét.'
+            : canUseCodes
+              ? 'con số tỷ lệ thắng tự nhảy trong khoảng 0% – 20% sau mỗi phiên quét. Bấm “quét lại phiên mới” để đổi dữ liệu quét.'
+              : 'con số tỷ lệ thắng tự nhảy trong khoảng 0% – 20% sau mỗi phiên quét. Bảng mã code và ô nhập code chỉ mở cho admin được cấp quyền.'}
+        </p>
+      </div>
+
       {preferred && !canUseCodes && (
-        <div className="rounded-md border border-accent-500/30 bg-accent-500/5 p-4">
-          <p className="flex items-center gap-2 font-mono text-[11px] text-accent-500">
-            <i className="ri-lock-2-line" />
-            Khu mã code chuyên nghiệp chỉ mở cho admin được chủ web cấp quyền.
+        <div className="rounded-md border hairline bg-background-100/60 p-3.5">
+          <p className="flex items-center gap-2 font-mono text-[10px] leading-relaxed text-foreground-500">
+            <i className="ri-shield-check-line text-primary-500" />
+            Tài khoản người chơi xem được tỷ lệ thắng và luồng quét dữ liệu, không hiển thị khoá mã.
           </p>
         </div>
       )}
@@ -206,7 +235,9 @@ export default function BookmakerResult({
                   >
                     <i
                       className={
-                        copied === item.serial ? 'ri-check-line text-[11px]' : 'ri-file-copy-line text-[11px]'
+                        copied === item.serial
+                          ? 'ri-check-line text-[11px]'
+                          : 'ri-file-copy-line text-[11px]'
                       }
                     />
                   </button>

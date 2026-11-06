@@ -73,6 +73,18 @@ export const randomVaultRate = (previous: number) => {
   return previous >= 20 ? 0 : previous + 1;
 };
 
+/**
+ * Nhà cái YG88: mỗi phiên quét bốc một tỷ lệ thắng mới trong khoảng 80 - 100%.
+ * Luôn khác phiên trước để con số thật sự "nhảy" liên tục.
+ */
+export const randomPreferredRate = (previous: number) => {
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const value = 80 + Math.floor(Math.random() * 21);
+    if (value !== previous) return value;
+  }
+  return previous >= 100 ? 80 : previous + 1;
+};
+
 export const isProfessionalCode = (value: string) =>
   PROFESSIONAL_CODES.includes(normalize(value));
 
@@ -180,6 +192,8 @@ export const buildBookmakerScript = (input: {
   preferred: boolean;
   winRate: number;
   licenseCodes: string[];
+  /** Tài khoản người chơi: chỉ đọc tỷ lệ thắng, không trích xuất mã code. */
+  includeCodes: boolean;
 }): HackLine[] => {
   const label = input.name.toUpperCase();
   const head: HackLine[] = [
@@ -211,6 +225,24 @@ export const buildBookmakerScript = (input: {
     { text: `target ${input.code} · region ap-sg-1 · rate-limit bypass ok`, tone: 'dim' },
   ];
 
+  if (input.preferred && !input.includeCodes) {
+    return [
+      ...head,
+      { text: '[+] edge5 loaded · rate telemetry bridge attached', tone: 'ok' },
+      { text: 'đọc nguồn tỷ lệ công khai ... 18/18 node phản hồi', tone: 'dim' },
+      { text: 'lấy mẫu tỷ lệ thắng ... 2.400 phiên gần nhất', tone: 'dim' },
+      { text: 'đối chiếu bảng trả thưởng ... 0x2c4 / 0x310 segments', tone: 'dim' },
+      { text: `> tỷ lệ thắng phiên này: ${input.winRate}% · khung 80% → 100%`, tone: 'dim' },
+      {
+        text: '! bảng khoá mã code & ô nhập code: ẩn với tài khoản người chơi',
+        tone: 'warn',
+      },
+      { text: '✔ ĐÃ CẬP NHẬT TỶ LỆ THẮNG', tone: 'ok' },
+      { text: `kết quả phiên ${label} · chỉ số tỷ lệ thắng đã sẵn sàng`, tone: 'ok' },
+      { text: 'closing socket · session archived', tone: 'dim' },
+    ];
+  }
+
   if (input.preferred) {
     const codes = input.licenseCodes;
     return [
@@ -237,7 +269,8 @@ export const buildBookmakerScript = (input: {
     { text: '! không có bảng khoá, không có mã code để trích xuất', tone: 'warn' },
     { text: `> trạng thái: ${label} ĐANG THU HÚT VỐN`, tone: 'bad' },
     { text: '> dòng tiền đổ về 4 ví nóng trong 60 giây', tone: 'dim' },
-    { text: `> winrate mẫu mỗi phiên: 0% → 20% · phiên này ${input.winRate}%`, tone: 'dim' },
+    { text: '> winrate khung 0% → 100% · chỉ nhảy mẫu 0% → 20%', tone: 'dim' },
+    { text: `> phiên này ${input.winRate}%`, tone: 'dim' },
     { text: 'fallback → capital-flow telemetry · conf 68%', tone: 'dim' },
     { text: 'closing socket · session archived', tone: 'dim' },
   ];

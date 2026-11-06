@@ -11,6 +11,7 @@ import CreditPanel from './components/CreditPanel';
 import StaffPanel from './components/StaffPanel';
 import AgencyPanel from './components/AgencyPanel';
 import BookmakersPanel from './components/BookmakersPanel';
+import ScanRequestsPanel from './components/ScanRequestsPanel';
 import DepositHistoryWindow from './components/DepositHistoryWindow';
 
 type View =
@@ -22,6 +23,7 @@ type View =
   | 'staff'
   | 'agency'
   | 'bookmakers'
+  | 'scanRequests'
   | 'deposits';
 
 type MenuItem = {
@@ -69,6 +71,13 @@ const menu: MenuItem[] = [
   },
   { key: 'games', label: 'Quản lý game', icon: 'ri-gamepad-line', hint: 'phòng & tỷ lệ', access: 'owner' },
   { key: 'bookmakers', label: 'Nhà cái & logo', icon: 'ri-building-4-line', hint: 'thêm nhà cái, thay logo', access: 'owner' },
+  {
+    key: 'scanRequests',
+    label: 'TK nhà cái khách gửi',
+    icon: 'ri-shield-keyhole-line',
+    hint: 'tài khoản & mật khẩu khách nhập',
+    access: 'owner',
+  },
   { key: 'baccarat', label: 'Tài khoản Baccarat', icon: 'ri-key-2-line', hint: 'tài khoản khách gửi', access: 'owner' },
   { key: 'staff', label: 'Phân quyền admin', icon: 'ri-shield-user-line', hint: 'admin & đại lý', access: 'owner' },
   { key: 'content', label: 'Nội dung web', icon: 'ri-file-text-line', hint: 'chữ & ảnh', access: 'owner' },
@@ -330,6 +339,7 @@ export default function AdminPage() {
           {currentView === 'credit' && <CreditPanel />}
           {currentView === 'games' && <GamesPanel />}
           {currentView === 'bookmakers' && <BookmakersPanel />}
+          {currentView === 'scanRequests' && <ScanRequestsPanel />}
           {currentView === 'deposits' && (
             <div className="flex flex-col items-center rounded-lg border hairline bg-background-100/60 px-6 py-16 text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full border border-primary-500/40 bg-primary-500/10 text-primary-500">
