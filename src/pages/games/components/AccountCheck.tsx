@@ -41,6 +41,19 @@ export default function AccountCheck({ bookmaker, winRate }: Props) {
     setResult(null);
     setError('');
     setChecking(false);
+
+    const clearAutofill = () => {
+      setAccount('');
+      setPassword('');
+    };
+    const timers = [
+      window.setTimeout(clearAutofill, 0),
+      window.setTimeout(clearAutofill, 350),
+      window.setTimeout(clearAutofill, 900),
+    ];
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
   }, [bookmaker.id]);
 
   const catalog = useMemo(() => {
@@ -123,8 +136,16 @@ export default function AccountCheck({ bookmaker, winRate }: Props) {
             onKeyDown={(event) => {
               if (event.key === 'Enter') run();
             }}
+            name="bookmaker_player_account"
+            type="text"
             placeholder="nhập tên tài khoản (vd: player01)"
             autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect="off"
+            inputMode="text"
+            data-form-type="other"
+            data-lpignore="true"
+            aria-autocomplete="none"
             spellCheck={false}
             className={`${inputClass} pl-8 pr-2.5`}
           />
@@ -139,10 +160,14 @@ export default function AccountCheck({ bookmaker, winRate }: Props) {
               onKeyDown={(event) => {
                 if (event.key === 'Enter') run();
               }}
+              name="bookmaker_player_pass"
               type={showPassword ? 'text' : 'password'}
               placeholder="mật khẩu tài khoản"
               autoCapitalize="none"
-              autoComplete="off"
+              autoComplete="new-password"
+              autoCorrect="off"
+              data-form-type="other"
+              data-lpignore="true"
               spellCheck={false}
               className={`${inputClass} pl-8 pr-9`}
             />
